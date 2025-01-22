@@ -62,3 +62,5 @@ const RegistryABI = [
     inputs: [{ name: "username", type: "string", internalType: "string" }],
   },
 ] as const;
+
+export default RegistryABI;

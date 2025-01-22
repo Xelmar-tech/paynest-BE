@@ -15,7 +15,7 @@ export function getEnvVariable(variableName: string) {
   return value;
 }
 
-function getChain(network: network_type) {
+export function getChain(network: network_type) {
   switch (network) {
     case "Arbitrum":
       return arbitrumSepolia;

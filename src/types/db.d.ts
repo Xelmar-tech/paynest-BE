@@ -21,9 +21,9 @@ type Organization = {
 
 type Payment = {
   id: number;
-  user: string; // Recipient of the funds
+  username: string; // Recipient of the funds
   amount: number;
-  token: Address;
+  token: Token;
   org_id: string; // Organization making this payment
   created_at: Date;
   network: network_type;

@@ -63,4 +63,355 @@ const RegistryABI = [
   },
 ] as const;
 
+const OrganizationABI = [
+  {
+    type: "constructor",
+    inputs: [
+      { name: "_owner", type: "address", internalType: "address" },
+      { name: "_name", type: "string", internalType: "string" },
+    ],
+    stateMutability: "payable",
+  },
+  { type: "receive", stateMutability: "payable" },
+  {
+    type: "function",
+    name: "cancelSchedule",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "cancelStream",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "createSchedule",
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+      { name: "token", type: "address", internalType: "address" },
+      { name: "oneTimePayoutDate", type: "uint40", internalType: "uint40" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "createStream",
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+      { name: "token", type: "address", internalType: "address" },
+      { name: "endStream", type: "uint40", internalType: "uint40" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "editSchedule",
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "editStream",
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "emergencyWithdraw",
+    inputs: [{ name: "tokenAddr", type: "address", internalType: "address" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getSchedule",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        internalType: "struct IOrg.Schedule",
+        components: [
+          { name: "token", type: "address", internalType: "address" },
+          { name: "nextPayout", type: "uint40", internalType: "uint40" },
+          { name: "isOneTime", type: "bool", internalType: "bool" },
+          { name: "active", type: "bool", internalType: "bool" },
+          { name: "amount", type: "uint256", internalType: "uint256" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getStream",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        internalType: "struct IOrg.Stream",
+        components: [
+          { name: "amount", type: "uint256", internalType: "uint256" },
+          { name: "token", type: "address", internalType: "address" },
+          { name: "lastPayout", type: "uint40", internalType: "uint40" },
+          { name: "endStream", type: "uint40", internalType: "uint40" },
+          { name: "active", type: "bool", internalType: "bool" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getSubscriptionDetails",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "requestSchedulePayout",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "requestStreamPayout",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "subscribe",
+    inputs: [{ name: "validUntil", type: "uint40", internalType: "uint40" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "updateOrgName",
+    inputs: [{ name: "newName", type: "string", internalType: "string" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "event",
+    name: "ETHReceived",
+    inputs: [
+      { name: "name", type: "string", indexed: false, internalType: "string" },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "OrgNameChange",
+    inputs: [
+      { name: "name", type: "string", indexed: false, internalType: "string" },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PaymentScheduleActive",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+      {
+        name: "token",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "nextPayout",
+        type: "uint40",
+        indexed: true,
+        internalType: "uint40",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PaymentScheduleCancelled",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PaymentStreamActive",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+      {
+        name: "token",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "startStream",
+        type: "uint40",
+        indexed: true,
+        internalType: "uint40",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PaymentStreamCancelled",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "Payout",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+      {
+        name: "token",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "ScheduleUpdated",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "StreamUpdated",
+    inputs: [
+      {
+        name: "username",
+        type: "string",
+        indexed: true,
+        internalType: "string",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "error",
+    name: "ActivePayment",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+  },
+  {
+    type: "error",
+    name: "InActivePayment",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+  },
+  { type: "error", name: "IncompatibleUserAddress", inputs: [] },
+  { type: "error", name: "InsufficientBalance", inputs: [] },
+  { type: "error", name: "InsufficientFee", inputs: [] },
+  { type: "error", name: "InvalidAmount", inputs: [] },
+  { type: "error", name: "InvalidStreamEnd", inputs: [] },
+  { type: "error", name: "MaxOrganizationsReached", inputs: [] },
+  { type: "error", name: "NoEditAccess", inputs: [] },
+  { type: "error", name: "NoPayoutDue", inputs: [] },
+  { type: "error", name: "NotAuthorized", inputs: [] },
+  { type: "error", name: "TokenAlreadySupported", inputs: [] },
+  { type: "error", name: "TokenNotSupported", inputs: [] },
+  {
+    type: "error",
+    name: "UserNotFound",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+  },
+] as const
 export default RegistryABI;
+export {OrganizationABI}

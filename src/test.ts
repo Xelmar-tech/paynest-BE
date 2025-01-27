@@ -1,3 +1,4 @@
+import { RegistryContract } from "./utils/constants";
 import DB from "./utils/db";
 
 const dummy = [
@@ -20,9 +21,9 @@ const dummy = [
 
 (async () => {
   const db = new DB();
-  await Promise.all(
-    dummy.map((d) => db.addWallet(d.user, d.network, d.address))
-  );
-  const wallets = await db.getUnsyncedWallets("Base");
-  console.log(wallets);
+  // const res = await db.createOrg("Xelmar", RegistryContract, RegistryContract, "yield_farmer")
+  const today = new Date()
+  const feb = today.setMonth(2)
+  console.log(feb)
+  await db.addSchedule("nft_collector", "Xelmar", 500, "Arbitrum", "USDC", BigInt(feb))
 })();

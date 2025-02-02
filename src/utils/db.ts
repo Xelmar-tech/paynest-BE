@@ -34,6 +34,12 @@ export default class DB {
     return this.sql(`SELECT * FROM public.stream WHERE "lastPayout" > ${WEEK} AND "endStream" <= ${TODAY}`) as unknown as StreamPayment[]
   }
 
+  public async getOrg(org_id: string){
+    const org = await this.sql(`SELECT * FROM public.organization WHERE name = $1`, [org_id]) as unknown as Organization[]
+    if (org.length === 1) return org[1]
+    throw new Error("Org not found")
+  }
+
   // Methods to help add test data to DB
   public async addWallet(user: string, network: string, address: string) {
     await this.sql(

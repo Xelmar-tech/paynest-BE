@@ -1,6 +1,7 @@
 /// <reference path="./types/chains.d.ts" />
 import cron from "node-cron";
 import registry from "./registry";
+import payments from "./payment";
 
 const NETWORKS: network_type[] = ["Arbitrum", "Base", "Optimism"];
 
@@ -12,6 +13,7 @@ async function main() {
       console.error("Error in updating registry", error);
     }
   });
+  
 }
 
 main();

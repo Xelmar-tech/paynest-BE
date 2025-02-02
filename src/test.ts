@@ -22,8 +22,7 @@ const dummy = [
 (async () => {
   const db = new DB();
   // const res = await db.createOrg("Xelmar", RegistryContract, RegistryContract, "yield_farmer")
-  const today = new Date()
-  const feb = today.setMonth(2)
-  console.log(feb)
-  await db.addSchedule("nft_collector", "Xelmar", 500, "Arbitrum", "USDC", BigInt(feb))
+  
+  const org = await db.getOrg("Xelmar1")
+  console.log(org)
 })();

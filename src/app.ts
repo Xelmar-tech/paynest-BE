@@ -13,7 +13,14 @@ async function main() {
       console.error("Error in updating registry", error);
     }
   });
-  
+
+  cron.schedule("0 0 * * *", async () => {
+    try {
+      await Promise.all([NETWORKS.map((n) => payments(n))]);
+    } catch (error) {
+      console.error("Error in payments", error);
+    }
+  });  
 }
 
 main();

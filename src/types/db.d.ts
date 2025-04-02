@@ -7,16 +7,20 @@ type Wallet = {
 };
 
 type User = {
+  uid: number;
   username: string;
   email: string;
-  wallets: Wallet[];
+  image: string;
 };
 
 type Organization = {
+  id: string;
   name: string;
-  controller: Address; // Address that is the contract owner for the Org
-  address: Address; // The contract address of the organization
+  logo: string;
+  wallet: Address; // The contract address of the organization
   owner: string; // User Id that maps to user from org
+  info: string | null;
+  network: network_type;
 };
 
 type Payment = {
@@ -37,4 +41,13 @@ type SchedulePayment = Payment & {
 type StreamPayment = Payment & {
   endStream: number;
   lastPayout: number; // In timestamp value
+};
+
+type Transaction = {
+  tx_id: string;
+  amount: string;
+  asset: Token;
+  network: network_type;
+  org_id: string;
+  recipient: string; // alias for username
 };

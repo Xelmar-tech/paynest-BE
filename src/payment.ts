@@ -9,6 +9,8 @@ export default async function payments(network: network_type) {
   const schedules = await db.getPendingSchedules();
   if (schedules.length === 0) return;
 
+  console.log(schedules);
+
   const { CONSTS, pubClient } = await getConsts(network);
 
   for (const { org_id, username } of schedules) {
@@ -19,6 +21,8 @@ export default async function payments(network: network_type) {
       abi: OrganizationABI,
       client: pubClient,
     });
-    await ORG.write.requestSchedulePayout([username], CONSTS);
+
+    await ORG.simulate.requestSchedulePayout([username]);
+    // await ORG.write.requestSchedulePayout([username], CONSTS);
   }
 }

@@ -1,14 +1,13 @@
 /// <reference path="../types/db.d.ts" />
 /// <reference path="../types/chains.d.ts" />
 
-import { neon, NeonQueryFunction } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 import { getEnvVariable } from "./config";
 
 class DB {
-  private sql: NeonQueryFunction<false, false>;
-  constructor() {
+  private get sql() {
     const dbUrl = getEnvVariable("DATABASE_URL");
-    this.sql = neon(dbUrl);
+    return neon(dbUrl);
   }
 
   public async getUsers() {
@@ -16,34 +15,35 @@ class DB {
   }
 
   public async getPendingSchedules() {
-    const TODAY = new Date().setUTCHours(0, 0, 0, 0);
-    return this.sql(`SELECT * FROM public.schedule WHERE "nextPayout" < ${TODAY}`) as unknown as SchedulePayment[];
-  }
+    const NOW = new Date().getTime() / 1000;
+    const ONE_HOUR_AGO = NOW - 60 * 60;
 
-  public async getPendingStreams() {
-    const today = new Date();
-    const TODAY = new Date().setUTCHours(0, 0, 0, 0);
-    const WEEK = new Date().setDate(today.getDate() + 7);
     return this.sql(
-      `SELECT * FROM public.stream WHERE "lastPayout" > ${WEEK} AND "endStream" <= ${TODAY}`
-    ) as unknown as StreamPayment[];
+      `SELECT * FROM public.schedule WHERE "nextPayout" BETWEEN ${ONE_HOUR_AGO} AND ${NOW}`
+    ) as unknown as SchedulePayment[];
   }
 
   public async getOrg(id: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE id = $1`, [id])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE id = $1`,
+      [id]
+    )) as unknown as Organization[];
     if (org.length === 1) return org[1];
     return null;
   }
 
   public async getOrgsWallets() {
-    const orgs = (await this.sql(`SELECT * FROM public.organization`)) as unknown as Organization[];
+    const orgs = (await this.sql(
+      `SELECT * FROM public.organization`
+    )) as unknown as Organization[];
     return orgs.map((org) => org.wallet);
   }
 
   public async getOrgByWallet(wallet: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE wallet = $1`, [
-      wallet,
-    ])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE wallet = $1`,
+      [wallet]
+    )) as unknown as Organization[];
     if (org.length === 1) return org[1];
     return null;
   }

@@ -19,7 +19,7 @@ async function main() {
     }
   });
 
-  cron.schedule("0 0 * * *", async () => {
+  cron.schedule("0 * * * *", async () => {
     try {
       await Promise.all(NETWORKS.map((n) => payments(n)));
     } catch (error) {

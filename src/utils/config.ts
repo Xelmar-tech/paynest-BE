@@ -34,7 +34,7 @@ export function createPubClient(network: network_type) {
 }
 
 export function createWClient(network: network_type) {
-  const privateKey = getEnvVariable("REGISTRY_KEY") as `0x${string}`;
+  const privateKey = getEnvVariable("PAYMENT_KEY") as `0x${string}`;
   const account = privateKeyToAccount(privateKey);
   return createWalletClient({
     chain: getChain(network),

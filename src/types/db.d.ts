@@ -11,6 +11,7 @@ type User = {
   username: string;
   email: string;
   image: string;
+  total_payout: string; // bigint
 };
 
 type Organization = {
@@ -36,6 +37,7 @@ type Payment = {
 type SchedulePayment = Payment & {
   isOneTime: boolean;
   nextPayout: number; // In timestamp value
+  active: boolean;
 };
 
 type StreamPayment = Payment & {

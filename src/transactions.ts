@@ -7,7 +7,7 @@ import { getTokenByAddress } from "./utils/token";
 import usersHash from "./utils/keccak256";
 
 type PublicClient = ReturnType<typeof createPubClient>;
-async function getDecimals(client: PublicClient, token: Address) {
+export async function getDecimals(client: PublicClient, token: Address) {
   const decimals = await client.readContract({
     address: token,
     abi: erc20Abi,

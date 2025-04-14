@@ -25,6 +25,9 @@ class DB {
   public async getSchedules() {
     return this.sql(`SELECT * FROM public.schedule`) as unknown as SchedulePayment[];
   }
+  public async getStreams() {
+    return this.sql(`SELECT * FROM public.stream`) as unknown as StreamPayment[];
+  }
 
   public async getOrg(id: string) {
     const org = (await this.sql(`SELECT * FROM public.organization WHERE id = $1`, [id])) as unknown as Organization[];
@@ -66,14 +69,20 @@ class DB {
     );
   }
 
-  public async updateSchedule(username: string, nextPayout: number, isOneTime: boolean, active: boolean) {
+  public async updateSchedule(
+    username: string,
+    orgId: string,
+    nextPayout: number,
+    isOneTime: boolean,
+    active: boolean
+  ) {
     await this.sql(
       `
       UPDATE public.schedule
-      SET "nextPayout" = $2, "isOneTime" = $3, "active" = $4
-      WHERE username = $1
+      SET "nextPayout" = $3, "isOneTime" = $4, "active" = $5
+      WHERE username = $1 AND org_id = $2
       `,
-      [username, nextPayout, isOneTime, active]
+      [username, orgId, nextPayout, isOneTime, active]
     );
   }
 }

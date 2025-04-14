@@ -31,11 +31,12 @@ export default async function payments(network: network_type) {
         const errorMessage = (error as any).metaMessages.join("\n");
         console.error(`Simulation failed for ${username} on Org ${org_.name}:\n${errorMessage}`);
       } else {
-        console.error(`Simulation failed for ${username} on Org ${org_.name}: ${(error as Error).message}`);
+        console.error(`Simulation failed for ${username} on Org ${org_.name}`);
       }
-      console.info(" Updating DB to match Blockchain records...");
       const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([username]);
-      await db.updateSchedule(username, nextPayout, isOneTime, active);
+      console.info("Updating DB to match Blockchain records...");
+
+      await db.updateSchedule(username, org_id, nextPayout, isOneTime, active);
       continue; // skip this user if simulation fails
     }
 
@@ -47,7 +48,7 @@ export default async function payments(network: network_type) {
       });
 
       const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([username]);
-      await db.updateSchedule(username, nextPayout, isOneTime, active);
+      await db.updateSchedule(username, org_id, nextPayout, isOneTime, active);
     } catch {
       continue;
     }

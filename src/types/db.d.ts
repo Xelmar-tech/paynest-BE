@@ -28,16 +28,16 @@ type Payment = {
   id: number;
   username: string; // Recipient of the funds
   amount: number;
-  token: Token;
+  asset: Token;
   org_id: string; // Organization making this payment
   created_at: Date;
   network: network_type;
+  active: boolean;
 };
 
 type SchedulePayment = Payment & {
   isOneTime: boolean;
   nextPayout: number; // In timestamp value
-  active: boolean;
 };
 
 type StreamPayment = Payment & {

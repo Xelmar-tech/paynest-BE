@@ -41,11 +41,10 @@ class DB {
   }
 
   public async getOrgByWallet(wallet: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE wallet = $1`, [
+    const org = (await this.sql(`SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`, [
       wallet,
     ])) as unknown as Organization[];
-    if (org.length === 1) return org[0];
-    return null;
+    return org.length === 1 ? org[0] : null;
   }
 
   public async addTransaction(tx: Transaction) {
@@ -83,6 +82,26 @@ class DB {
       WHERE username = $1 AND org_id = $2
       `,
       [username, orgId, nextPayout, isOneTime, active]
+    );
+  }
+  public async updateStreamAmount(username: string, orgId: string, amount: number) {
+    await this.sql(
+      `
+      UPDATE public.stream
+      SET "amount" = $3
+      WHERE username = $1 AND org_id = $2
+      `,
+      [username, orgId, amount]
+    );
+  }
+  public async updateScheduleAmount(username: string, orgId: string, amount: number) {
+    await this.sql(
+      `
+      UPDATE public.schedule
+      SET "amount" = $3
+      WHERE username = $1 AND org_id = $2
+      `,
+      [username, orgId, amount]
     );
   }
 }

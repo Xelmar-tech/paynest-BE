@@ -27,9 +27,11 @@ export function getChain(network: network_type) {
 }
 
 export function createPubClient(network: network_type) {
+  const chain = getChain(network);
+  const _network = `${network.toLowerCase()}${chain.testnet ? "-sepolia" : ""}`;
   return createPublicClient({
-    chain: getChain(network),
-    transport: http(),
+    chain,
+    transport: http(`https://${_network}.infura.io/v3/${getEnvVariable("INFURA_KEY")}`),
   });
 }
 

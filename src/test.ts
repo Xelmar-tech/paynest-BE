@@ -1,19 +1,19 @@
 import { formatUnits, getContract, parseUnits } from "viem";
 import payments from "./payment";
-import transactions, { getDecimals } from "./transactions";
+import transactions from "./txn";
 import db from "./utils/db";
 import OrganizationABI from "./utils/abi";
 import { getConsts } from "./utils/constants";
+import { getDecimals } from "./utils";
 
 async function testStevenSchedules() {
-  const s = await db.getSchedules();
-  const steven_schedules = s.filter((s) => s.username === "steven");
+  const schedules = await db.getSchedules();
   const { pubClient } = await getConsts("Base");
 
-  for (const steven_schedule of steven_schedules) {
-    const org_ = await db.getOrg(steven_schedule.org_id);
+  for (const { org_id, username } of schedules) {
+    const org_ = await db.getOrg(org_id);
     if (!org_) {
-      console.error(`Organization with Org ID ${steven_schedule.org_id} couldn't be found`);
+      console.error(`Organization with Org ID ${org_id} couldn't be found`);
       continue;
     }
 
@@ -23,29 +23,21 @@ async function testStevenSchedules() {
       client: pubClient,
     });
 
-    const schedule = await ORG.read.getSchedule(["steven"]);
-    console.log(`
-    Blockchain Schedule for ${org_.name}:
-     - Next Payout: ${schedule.nextPayout}
-     - Is One Time Payment: ${schedule.isOneTime}
-     - Is Active: ${schedule.active}  
-      
-    Database Schedule for ${org_.name}:
-     - Next Payout: ${steven_schedule.nextPayout}
-     - Is One Time Payment: ${steven_schedule.isOneTime}
-     - Is Active: ${steven_schedule.active}      
-      `);
+    const schedule = await ORG.read.getSchedule([username]);
+    const decimals = await getDecimals(pubClient, schedule.token);
+    const amount = formatUnits(schedule.amount, decimals);
+
+    await db.updateScheduleAmount(username, org_id, Number(amount));
   }
 }
 async function testStevenStreams() {
-  const s = await db.getStreams();
-  const steven_streams = s.filter((s) => s.username === "steven");
+  const streams = await db.getStreams();
   const { pubClient } = await getConsts("Base");
 
-  for (const steven_stream of steven_streams) {
-    const org_ = await db.getOrg(steven_stream.org_id);
+  for (const { org_id, username, asset, ...stream_ } of streams) {
+    const org_ = await db.getOrg(org_id);
     if (!org_) {
-      console.error(`Organization with Org ID ${steven_stream.org_id} couldn't be found`);
+      console.error(`Organization with Org ID ${org_id} couldn't be found`);
       continue;
     }
 
@@ -55,25 +47,16 @@ async function testStevenStreams() {
       client: pubClient,
     });
 
-    const stream = await ORG.read.getStream(["steven"]);
+    const stream = await ORG.read.getStream([username]);
     const decimals = await getDecimals(pubClient, stream.token);
     const amount = formatUnits(stream.amount, decimals);
-    console.log(`
-    Blockchain Schedule for ${org_.name}:
-     - Last Payout: ${stream.lastPayout}
-     - Amount/Sec: ${amount} ${steven_stream.asset}
-     - Is Active: ${stream.active}  
-      
-    Database Schedule for ${org_.name}:
-     - Last Payout: ${steven_stream.lastPayout}
-     - Amount/Sec: ${steven_stream.amount} ${steven_stream.asset}
-     - Is Active: ${steven_stream.active}      
-      `);
+
+    await db.updateStreamAmount(username, org_id, Number(amount));
   }
 }
 
 async function main() {
-  // await payments("Base");
-  await testStevenStreams();
+  await transactions("Base");
+  // await testStevenSchedules();
 }
 main();

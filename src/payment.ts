@@ -4,6 +4,8 @@ import { getContract } from "viem";
 import db from "./utils/db";
 import OrganizationABI from "./utils/abi";
 import { getConsts } from "./utils/constants";
+import { getBalance } from "./utils";
+import { TOKENS } from "./utils/token";
 
 export default async function payments(network: network_type) {
   const schedules = await db.getPendingSchedules();
@@ -11,10 +13,24 @@ export default async function payments(network: network_type) {
 
   const { CONSTS, pubClient } = await getConsts(network);
 
-  for (const { org_id, username } of schedules) {
+  for (const { org_id, username, amount, asset } of schedules) {
     const org_ = await db.getOrg(org_id);
     if (!org_) {
       console.error(`Organization with Org ID ${org_id} couldn't be found`);
+      continue;
+    }
+
+    const token = TOKENS.Base[asset] as Address;
+    const balance = await getBalance(pubClient, token, org_.wallet);
+
+    if (balance < Number(amount)) {
+      console.warn(
+        `The Organization wallet of ${
+          org_.name
+        } has insufficient ${asset} to pay ${username} his scheduled ${Number(
+          amount
+        )}${asset}\nPlease top up the wallet in order to pay!`
+      );
       continue;
     }
 
@@ -29,13 +45,20 @@ export default async function payments(network: network_type) {
     } catch (error) {
       if ((error as any).metaMessages) {
         const errorMessage = (error as any).metaMessages.join("\n");
-        console.error(`Simulation failed for ${username} on Org ${org_.name}:\n${errorMessage}`);
+        console.error(
+          `Simulation failed for ${username} on Org ${org_.name}:\n${errorMessage}`
+        );
       } else {
-        console.error(`Simulation failed for ${username} on Org ${org_.name}`);
+        console.error(
+          `Simulation failed for ${username} on Org ${
+            org_.name
+          }~ ${JSON.stringify(error, null, 2)}`
+        );
       }
-      const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([username]);
+      const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([
+        username,
+      ]);
       console.info("Updating DB to match Blockchain records...");
-
       await db.updateSchedule(username, org_id, nextPayout, isOneTime, active);
       continue; // skip this user if simulation fails
     }
@@ -47,7 +70,9 @@ export default async function payments(network: network_type) {
         confirmations: 10,
       });
 
-      const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([username]);
+      const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([
+        username,
+      ]);
       await db.updateSchedule(username, org_id, nextPayout, isOneTime, active);
     } catch {
       continue;

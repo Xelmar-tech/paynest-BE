@@ -23,27 +23,37 @@ class DB {
     ) as unknown as SchedulePayment[];
   }
   public async getSchedules() {
-    return this.sql(`SELECT * FROM public.schedule`) as unknown as SchedulePayment[];
+    return this.sql(
+      `SELECT * FROM public.schedule`
+    ) as unknown as SchedulePayment[];
   }
   public async getStreams() {
-    return this.sql(`SELECT * FROM public.stream`) as unknown as StreamPayment[];
+    return this.sql(
+      `SELECT * FROM public.stream`
+    ) as unknown as StreamPayment[];
   }
 
   public async getOrg(id: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE id = $1`, [id])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE id = $1`,
+      [id]
+    )) as unknown as Organization[];
     if (org.length === 1) return org[0];
     return null;
   }
 
   public async getOrgsWallets() {
-    const orgs = (await this.sql(`SELECT * FROM public.organization`)) as unknown as Organization[];
+    const orgs = (await this.sql(
+      `SELECT * FROM public.organization`
+    )) as unknown as Organization[];
     return orgs.map((org) => org.wallet);
   }
 
   public async getOrgByWallet(wallet: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`, [
-      wallet,
-    ])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`,
+      [wallet]
+    )) as unknown as Organization[];
     return org.length === 1 ? org[0] : null;
   }
 
@@ -75,16 +85,28 @@ class DB {
     isOneTime: boolean,
     active: boolean
   ) {
-    await this.sql(
+    return await this.sql(
       `
       UPDATE public.schedule
-      SET "nextPayout" = $3, "isOneTime" = $4, "active" = $5
+      SET "nextPayout" = $3, "isOneTime" = $4, active = $5
       WHERE username = $1 AND org_id = $2
       `,
       [username, orgId, nextPayout, isOneTime, active]
     );
   }
-  public async updateStreamAmount(username: string, orgId: string, amount: number) {
+
+  public async getUserOrgSchedule(uname: string, orgId: string) {
+    return this.sql(
+      `SELECT * FROM public.schedule WHERE username = $1 AND org_id = $2`,
+      [uname, orgId]
+    );
+  }
+
+  public async updateStreamAmount(
+    username: string,
+    orgId: string,
+    amount: number
+  ) {
     await this.sql(
       `
       UPDATE public.stream
@@ -94,7 +116,11 @@ class DB {
       [username, orgId, amount]
     );
   }
-  public async updateScheduleAmount(username: string, orgId: string, amount: number) {
+  public async updateScheduleAmount(
+    username: string,
+    orgId: string,
+    amount: number
+  ) {
     await this.sql(
       `
       UPDATE public.schedule

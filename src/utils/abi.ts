@@ -11,7 +11,10 @@ const abi = [
   {
     type: "function",
     name: "cancelSchedule",
-    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "payIncomplete", type: "bool", internalType: "bool" },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -29,7 +32,13 @@ const abi = [
       { name: "username", type: "string", internalType: "string" },
       { name: "amount", type: "uint256", internalType: "uint256" },
       { name: "token", type: "address", internalType: "address" },
-      { name: "oneTimePayoutDate", type: "uint40", internalType: "uint40" },
+      {
+        name: "interval",
+        type: "uint8",
+        internalType: "enum IPayments.IntervalType",
+      },
+      { name: "isOneTime", type: "bool", internalType: "bool" },
+      { name: "firstPaymentDate", type: "uint40", internalType: "uint40" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -78,6 +87,11 @@ const abi = [
         components: [
           { name: "token", type: "address", internalType: "address" },
           { name: "nextPayout", type: "uint40", internalType: "uint40" },
+          {
+            name: "interval",
+            type: "uint8",
+            internalType: "enum IPayments.IntervalType",
+          },
           { name: "isOneTime", type: "bool", internalType: "bool" },
           { name: "active", type: "bool", internalType: "bool" },
           { name: "amount", type: "uint256", internalType: "uint256" },
@@ -108,6 +122,13 @@ const abi = [
   },
   {
     type: "function",
+    name: "orgName",
+    inputs: [],
+    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "requestSchedulePayout",
     inputs: [{ name: "username", type: "string", internalType: "string" }],
     outputs: [],
@@ -117,33 +138,10 @@ const abi = [
     type: "function",
     name: "requestStreamPayout",
     inputs: [{ name: "username", type: "string", internalType: "string" }],
-    outputs: [],
-    stateMutability: "payable",
-  },
-  {
-    type: "event",
-    name: "PaymentExecuted",
-    inputs: [
-      {
-        name: "username",
-        type: "string",
-        indexed: true,
-        internalType: "string",
-      },
-      {
-        name: "token",
-        type: "address",
-        indexed: false,
-        internalType: "address",
-      },
-      {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+    outputs: [
+      { name: "payoutAmount", type: "uint256", internalType: "uint256" },
     ],
-    anonymous: false,
+    stateMutability: "payable",
   },
   {
     type: "event",
@@ -152,7 +150,7 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
     ],
@@ -165,7 +163,7 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
     ],
@@ -178,13 +176,13 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
       {
         name: "token",
         type: "address",
-        indexed: true,
+        indexed: false,
         internalType: "address",
       },
       {
@@ -203,7 +201,7 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
       {
@@ -234,7 +232,7 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
       {
@@ -253,7 +251,7 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
       {
@@ -284,7 +282,7 @@ const abi = [
       {
         name: "username",
         type: "string",
-        indexed: true,
+        indexed: false,
         internalType: "string",
       },
       {
@@ -312,6 +310,8 @@ const abi = [
   { type: "error", name: "InsufficientFee", inputs: [] },
   { type: "error", name: "InvalidAmount", inputs: [] },
   { type: "error", name: "InvalidEndDate", inputs: [] },
+  { type: "error", name: "InvalidFirstPaymentDate", inputs: [] },
+  { type: "error", name: "InvalidInterval", inputs: [] },
   { type: "error", name: "InvalidStreamEnd", inputs: [] },
   { type: "error", name: "InvalidSubscriptionPeriod", inputs: [] },
   { type: "error", name: "MaxOrganizationsReached", inputs: [] },

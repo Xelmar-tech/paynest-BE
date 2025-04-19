@@ -1,6 +1,6 @@
 /// <reference path="../types/chains.d.ts" />
 
-const TOKENS = {
+export const TOKENS = {
   Base: {
     // USDC: "0x890570700059d55ba21e523ad070f0c9b82278a9",
     // USDT: "0x890570700059d55ba21e523ad070f0c9b82278a9",

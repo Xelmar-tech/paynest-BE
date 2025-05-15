@@ -10,10 +10,6 @@ class DB {
     return neon(dbUrl);
   }
 
-  public async getUsers() {
-    return this.sql("SELECT * FROM public.user") as unknown as User[];
-  }
-
   public async getPendingSchedules() {
     const NOW = Math.floor(Date.now() / 1000);
 
@@ -22,38 +18,22 @@ class DB {
       [NOW]
     ) as unknown as SchedulePayment[];
   }
-  public async getSchedules() {
-    return this.sql(
-      `SELECT * FROM public.schedule`
-    ) as unknown as SchedulePayment[];
-  }
-  public async getStreams() {
-    return this.sql(
-      `SELECT * FROM public.stream`
-    ) as unknown as StreamPayment[];
-  }
 
   public async getOrg(id: string) {
-    const org = (await this.sql(
-      `SELECT * FROM public.organization WHERE id = $1`,
-      [id]
-    )) as unknown as Organization[];
+    const org = (await this.sql(`SELECT * FROM public.organization WHERE id = $1`, [id])) as unknown as Organization[];
     if (org.length === 1) return org[0];
     return null;
   }
 
   public async getOrgsWallets() {
-    const orgs = (await this.sql(
-      `SELECT * FROM public.organization`
-    )) as unknown as Organization[];
+    const orgs = (await this.sql(`SELECT * FROM public.organization`)) as unknown as Organization[];
     return orgs.map((org) => org.wallet);
   }
 
   public async getOrgByWallet(wallet: string) {
-    const org = (await this.sql(
-      `SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`,
-      [wallet]
-    )) as unknown as Organization[];
+    const org = (await this.sql(`SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`, [
+      wallet,
+    ])) as unknown as Organization[];
     return org.length === 1 ? org[0] : null;
   }
 
@@ -77,57 +57,14 @@ class DB {
       [username, amount]
     );
   }
-
-  public async updateSchedule(
-    username: string,
-    orgId: string,
-    nextPayout: number,
-    isOneTime: boolean,
-    active: boolean
-  ) {
-    return await this.sql(
-      `
-      UPDATE public.schedule
-      SET "nextPayout" = $3, "isOneTime" = $4, active = $5
-      WHERE username = $1 AND org_id = $2
-      `,
-      [username, orgId, nextPayout, isOneTime, active]
-    );
-  }
-
-  public async getUserOrgSchedule(uname: string, orgId: string) {
-    return this.sql(
-      `SELECT * FROM public.schedule WHERE username = $1 AND org_id = $2`,
-      [uname, orgId]
-    );
-  }
-
-  public async updateStreamAmount(
-    username: string,
-    orgId: string,
-    amount: number
-  ) {
+  public async updatePayout(username: string, amount: number) {
     await this.sql(
       `
-      UPDATE public.stream
-      SET "amount" = $3
-      WHERE username = $1 AND org_id = $2
+      UPDATE public."user"
+      SET total_payout = COALESCE(total_payout, 0) + $2
+      WHERE username = $1
       `,
-      [username, orgId, amount]
-    );
-  }
-  public async updateScheduleAmount(
-    username: string,
-    orgId: string,
-    amount: number
-  ) {
-    await this.sql(
-      `
-      UPDATE public.schedule
-      SET "amount" = $3
-      WHERE username = $1 AND org_id = $2
-      `,
-      [username, orgId, amount]
+      [username, amount]
     );
   }
 }

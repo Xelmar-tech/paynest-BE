@@ -25,9 +25,7 @@ export default async function payments(network: network_type) {
 
     if (balance < Number(amount)) {
       console.warn(
-        `The Organization wallet of ${
-          org_.name
-        } has insufficient ${asset} to pay ${username} his scheduled ${Number(
+        `The Organization wallet of ${org_.name} has insufficient ${asset} to pay ${username} his scheduled ${Number(
           amount
         )}${asset}\nPlease top up the wallet in order to pay!`
       );
@@ -45,21 +43,10 @@ export default async function payments(network: network_type) {
     } catch (error) {
       if ((error as any).metaMessages) {
         const errorMessage = (error as any).metaMessages.join("\n");
-        console.error(
-          `Simulation failed for ${username} on Org ${org_.name}:\n${errorMessage}`
-        );
+        console.error(`Simulation failed for ${username} on Org ${org_.name}:\n${errorMessage}`);
       } else {
-        console.error(
-          `Simulation failed for ${username} on Org ${
-            org_.name
-          }~ ${JSON.stringify(error, null, 2)}`
-        );
+        console.error(`Simulation failed for ${username} on Org ${org_.name}~ ${JSON.stringify(error, null, 2)}`);
       }
-      const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([
-        username,
-      ]);
-      console.info("Updating DB to match Blockchain records...");
-      await db.updateSchedule(username, org_id, nextPayout, isOneTime, active);
       continue; // skip this user if simulation fails
     }
 
@@ -69,11 +56,6 @@ export default async function payments(network: network_type) {
         hash,
         confirmations: 10,
       });
-
-      const { nextPayout, isOneTime, active } = await ORG.read.getSchedule([
-        username,
-      ]);
-      await db.updateSchedule(username, org_id, nextPayout, isOneTime, active);
     } catch {
       continue;
     }

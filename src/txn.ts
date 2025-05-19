@@ -24,9 +24,7 @@ export default async function transactions(network: network_type) {
 
   const logs = await client.getLogs({
     address: orgs,
-    events: parseAbi([
-      "event Payout(string username,address token,uint256 amount)",
-    ]),
+    events: parseAbi(["event Payout(string username,address token,uint256 amount)"]),
     fromBlock: BigInt(block),
     toBlock: latestBlock,
     strict: true,
@@ -36,10 +34,7 @@ export default async function transactions(network: network_type) {
     const { args, address, transactionHash } = log;
     const { username, token, amount } = args;
 
-    const [org, decimals] = await Promise.all([
-      db.getOrgByWallet(address),
-      getDecimals(client, token),
-    ]);
+    const [org, decimals] = await Promise.all([db.getOrgByWallet(address), getDecimals(client, token)]);
     if (!org) {
       console.error(`❌ No organization found for address: ${address}`);
       continue;

@@ -57,16 +57,59 @@ class DB {
       [username, amount]
     );
   }
-  public async updatePayout(username: string, amount: number) {
-    await this.sql(
-      `
-      UPDATE public."user"
-      SET total_payout = COALESCE(total_payout, 0) + $2
-      WHERE username = $1
-      `,
-      [username, amount]
+
+  public async findRecentSchedule(username: string, orgId: string): Promise<SchedulePayment | null> {
+    const result = await this.sql(
+      `SELECT * FROM public.schedule
+       WHERE username = $1
+         AND org_id = $2
+         AND active = true
+         AND updated_at BETWEEN now() - interval '20 minutes' AND now()
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [username, orgId]
     );
+    return (result[0] as SchedulePayment) ?? null;
   }
+  public async findRecentStream(username: string, orgId: string): Promise<StreamPayment | null> {
+    const result = await this.sql(
+      `SELECT * FROM public.stream
+       WHERE username = $1
+         AND org_id = $2
+         AND active = true
+         AND updated_at BETWEEN now() - interval '20 minutes' AND now()
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [username, orgId]
+    );
+    return (result[0] as StreamPayment) ?? null;
+  }
+
+  public async updatePaymentModel(table: "schedule" | "stream", id: number, fields: Record<string, boolean | number>) {
+    const updates: string[] = [];
+    const values: any[] = [id];
+    let paramIndex = 2;
+
+    for (const [key, value] of Object.entries(fields)) {
+      if (key === "payout") {
+        updates.push(`"${key}" = COALESCE("${key}", 0) + $${paramIndex}`);
+      } else {
+        updates.push(`"${key}" = $${paramIndex}`);
+      }
+      values.push(value);
+      paramIndex++;
+    }
+
+    const setClause = updates.join(", ");
+    const query = `UPDATE public.${table} SET ${setClause} WHERE id = $1`;
+
+    await this.sql(query, values);
+  }
+
+  // public async updateScheduleStatus(id: number, active: boolean, nextPayout: number) {
+  //   await this.sql(`UPDATE public.schedule SET active = $2, "nextPayout" = $3 WHERE id = $1`, [id, active, nextPayout]);
+  // }
+  // public async updateSchedulePayout();
 }
 
 const db = new DB();

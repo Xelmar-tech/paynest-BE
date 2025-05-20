@@ -13,7 +13,7 @@ export default async function payments(network: network_type) {
 
   const { CONSTS, pubClient } = await getConsts(network);
 
-  for (const { org_id, username, amount, asset } of schedules) {
+  for (const { org_id, username, amount, asset, id } of schedules) {
     const org_ = await db.getOrg(org_id);
     if (!org_) {
       console.error(`Organization with Org ID ${org_id} couldn't be found`);
@@ -56,6 +56,8 @@ export default async function payments(network: network_type) {
         hash,
         confirmations: 10,
       });
+      // const { active, nextPayout } = await ORG.read.getSchedule([username]);
+      // await db.updateScheduleStatus(id, active, nextPayout);
     } catch {
       continue;
     }

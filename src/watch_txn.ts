@@ -1,20 +1,31 @@
 /// <reference path="./types/chains.d.ts" />
 
-import { formatUnits, parseAbiItem } from "viem";
+import { formatUnits, parseAbi } from "viem";
 import db from "./utils/db";
 import { createPubClient } from "./utils/config";
 import { getTokenByAddress } from "./utils/token";
 import { getDecimals } from "./utils";
+import redis from "./utils/redis";
+import abi from "./utils/abi";
 
 export default async function watch_transactions(network: network_type) {
   const client = createPubClient(network);
+  const key = `currentBlock:${network}`;
+
+  const [latestBlock, currentBlock] = await Promise.all([client.getBlockNumber(), redis.get<number>(key)]);
+  const fromBlock = currentBlock ? BigInt(currentBlock) : latestBlock;
+  await redis.set(key, Number(latestBlock.toString()));
 
   client.watchEvent({
-    event: parseAbiItem("event Payout(string username,address token,uint256 amount)"),
+    events: parseAbi([
+      "event StreamPayout(string username,address token,uint256 amount)",
+      "event SchedulePayout(string username,address token,uint256 amount)",
+    ]),
     strict: true,
+    fromBlock,
     onLogs: async (logs) => {
       for (const log of logs) {
-        const { args, address, transactionHash } = log;
+        const { args, address, transactionHash, eventName } = log;
         const { username, token, amount } = args;
 
         const [org, decimals] = await Promise.all([db.getOrgByWallet(address), getDecimals(client, token)]);
@@ -23,24 +34,79 @@ export default async function watch_transactions(network: network_type) {
           continue;
         }
 
-        const amount_ = formatUnits(amount, decimals);
-        await db.addUserTP(username, Number(amount_));
-
+        const payout = formatUnits(amount, decimals);
         const asset = getTokenByAddress(network, token);
         if (!asset) {
           console.error(`❌ No asset found for token: ${token}`);
           continue;
         }
 
-        await db.addTransaction({
-          recipient: username,
-          amount: amount_,
-          tx_id: transactionHash,
-          org_id: org.id,
-          network,
-          asset,
-        });
+        const updatePayment = eventName === "SchedulePayout" ? updateSchedule : updateStream;
+        await Promise.all([
+          db.addUserTP(username, Number(payout)),
+          db.addTransaction({
+            recipient: username,
+            amount: payout,
+            tx_id: transactionHash,
+            org_id: org.id,
+            network,
+            asset,
+          }),
+          updatePayment(username, org, Number(payout)),
+        ]);
       }
     },
   });
+}
+
+async function updateSchedule(username: string, org: Organization, payout: number) {
+  const client = createPubClient("Base");
+
+  const getSCPayment = client.readContract({
+    address: org.wallet,
+    abi: abi,
+    functionName: "getSchedule",
+    args: [username],
+  });
+
+  const [dbPayment, scPayment] = await Promise.all([db.findRecentSchedule(username, org.id), getSCPayment]);
+
+  if (dbPayment === null) {
+    console.error(`❌ Active Schedule Payment not found for ${username} on ${org.name}`);
+    return;
+  }
+
+  const updateFields = {
+    nextPayout: scPayment.nextPayout,
+    active: scPayment.active,
+    payout,
+  };
+
+  await db.updatePaymentModel("schedule", dbPayment.id, updateFields);
+}
+
+async function updateStream(username: string, org: Organization, payout: number) {
+  const client = createPubClient("Base");
+
+  const getSCPayment = client.readContract({
+    address: org.wallet,
+    abi: abi,
+    functionName: "getStream",
+    args: [username],
+  });
+
+  const [dbPayment, scPayment] = await Promise.all([db.findRecentStream(username, org.id), getSCPayment]);
+
+  if (dbPayment === null) {
+    console.error(`❌ Active Stream Payment not found for ${username} on ${org.name}`);
+    return;
+  }
+
+  const updateFields = {
+    lastPayout: scPayment.lastPayout,
+    active: scPayment.active,
+    payout,
+  };
+
+  await db.updatePaymentModel("stream", dbPayment.id, updateFields);
 }

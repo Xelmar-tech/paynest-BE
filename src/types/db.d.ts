@@ -33,6 +33,7 @@ type Payment = {
   created_at: Date;
   network: network_type;
   active: boolean;
+  updated_at: Date;
 };
 
 type SchedulePayment = Payment & {

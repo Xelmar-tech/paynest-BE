@@ -1,6 +1,5 @@
 /// <reference path="./types/chains.d.ts" />
 import cron from "node-cron";
-import transactions from "./txn";
 import payments from "./payment";
 import watch_transactions from "./watch_txn";
 

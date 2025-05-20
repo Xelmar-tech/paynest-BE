@@ -64,8 +64,6 @@ class DB {
        WHERE username = $1
          AND org_id = $2
          AND active = true
-         AND updated_at BETWEEN now() - interval '20 minutes' AND now()
-       ORDER BY updated_at DESC
        LIMIT 1`,
       [username, orgId]
     );
@@ -77,8 +75,6 @@ class DB {
        WHERE username = $1
          AND org_id = $2
          AND active = true
-         AND updated_at BETWEEN now() - interval '20 minutes' AND now()
-       ORDER BY updated_at DESC
        LIMIT 1`,
       [username, orgId]
     );
@@ -105,11 +101,6 @@ class DB {
 
     await this.sql(query, values);
   }
-
-  // public async updateScheduleStatus(id: number, active: boolean, nextPayout: number) {
-  //   await this.sql(`UPDATE public.schedule SET active = $2, "nextPayout" = $3 WHERE id = $1`, [id, active, nextPayout]);
-  // }
-  // public async updateSchedulePayout();
 }
 
 const db = new DB();

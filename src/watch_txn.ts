@@ -110,3 +110,5 @@ async function updateStream(username: string, org: Organization, payout: number)
 
   await db.updatePaymentModel("stream", dbPayment.id, updateFields);
 }
+
+export { updateSchedule, updateStream };

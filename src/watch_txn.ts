@@ -5,16 +5,11 @@ import db from "./utils/db";
 import { createPubClient } from "./utils/config";
 import { getTokenByAddress } from "./utils/token";
 import { getDecimals } from "./utils";
-import redis from "./utils/redis";
 import abi from "./utils/abi";
 
 export default async function watch_transactions(network: network_type) {
   const client = createPubClient(network);
-  const key = `currentBlock:${network}`;
-
-  const [latestBlock, currentBlock] = await Promise.all([client.getBlockNumber(), redis.get<number>(key)]);
-  const fromBlock = currentBlock ? BigInt(currentBlock) : latestBlock;
-  await redis.set(key, Number(latestBlock.toString()));
+  const latestBlock = await client.getBlockNumber();
 
   client.watchEvent({
     events: parseAbi([
@@ -22,7 +17,7 @@ export default async function watch_transactions(network: network_type) {
       "event SchedulePayout(string username,address token,uint256 amount)",
     ]),
     strict: true,
-    fromBlock,
+    fromBlock: latestBlock,
     onLogs: async (logs) => {
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;

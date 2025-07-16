@@ -23,6 +23,7 @@ async function main() {
   // });
 
   watch_transactions("Base");
+  console.log("Paynest Backend is running 🥳");
 }
 
 main();

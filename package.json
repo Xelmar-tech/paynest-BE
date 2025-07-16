@@ -1,7 +1,7 @@
 {
   "name": "paynest-be",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/app.ts",
   "scripts": {
     "app": "ts-node src/app.ts",
     "test": "ts-node src/test.ts"

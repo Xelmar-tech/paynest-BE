@@ -16,7 +16,7 @@ class DB {
     return this.sql(
       `SELECT * FROM public.schedule WHERE "nextPayout" <= $1 AND "active" = true ORDER BY "nextPayout" ASC`,
       [NOW]
-    ) as unknown as SchedulePayment[];
+    ) as unknown as Schedule[];
   }
 
   public async getOrg(id: string) {
@@ -37,7 +37,7 @@ class DB {
     return org.length === 1 ? org[0] : null;
   }
 
-  public async addTransaction(tx: Transaction) {
+  public async addTransaction(tx: transaction) {
     const { tx_id, amount, asset, network, org_id, recipient } = tx;
     await this.sql(
       `
@@ -58,7 +58,7 @@ class DB {
     );
   }
 
-  public async findRecentSchedule(username: string, orgId: string): Promise<SchedulePayment | null> {
+  public async findRecentSchedule(username: string, orgId: string): Promise<Schedule | null> {
     const result = await this.sql(
       `SELECT * FROM public.schedule
        WHERE username = $1
@@ -67,9 +67,9 @@ class DB {
        LIMIT 1`,
       [username, orgId]
     );
-    return (result[0] as SchedulePayment) ?? null;
+    return (result[0] as Schedule) ?? null;
   }
-  public async findRecentStream(username: string, orgId: string): Promise<StreamPayment | null> {
+  public async findRecentStream(username: string, orgId: string): Promise<Stream | null> {
     const result = await this.sql(
       `SELECT * FROM public.stream
        WHERE username = $1
@@ -78,10 +78,10 @@ class DB {
        LIMIT 1`,
       [username, orgId]
     );
-    return (result[0] as StreamPayment) ?? null;
+    return (result[0] as Stream) ?? null;
   }
 
-  public async updatePaymentModel(table: "schedule" | "stream", id: number, fields: Record<string, boolean | number>) {
+  public async updatePaymentModel(table: "schedule" | "stream", id: string, fields: Record<string, boolean | number>) {
     const updates: string[] = [];
     const values: any[] = [id];
     let paramIndex = 2;

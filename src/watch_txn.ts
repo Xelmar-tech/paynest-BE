@@ -11,47 +11,47 @@ export default async function watch_transactions(network: network_type) {
   const client = createPubClient(network);
   const latestBlock = await client.getBlockNumber();
 
-  client.watchEvent({
-    events: parseAbi([
-      "event StreamPayout(string username,address token,uint256 amount)",
-      "event SchedulePayout(string username,address token,uint256 amount)",
-    ]),
-    strict: true,
-    fromBlock: latestBlock,
-    onLogs: async (logs) => {
-      for (const log of logs) {
-        const { args, address, transactionHash, eventName } = log;
-        const { username, token, amount } = args;
+  // client.watchEvent({
+  //   events: parseAbi([
+  //     "event StreamPayout(string username,address token,uint256 amount)",
+  //     "event SchedulePayout(string username,address token,uint256 amount)",
+  //   ]),
+  //   strict: true,
+  //   fromBlock: latestBlock,
+  //   onLogs: async (logs) => {
+  //     for (const log of logs) {
+  //       const { args, address, transactionHash, eventName } = log;
+  //       const { username, token, amount } = args;
 
-        const [org, decimals] = await Promise.all([db.getOrgByWallet(address), getDecimals(client, token)]);
-        if (!org) {
-          console.error(`❌ No organization found for address: ${address}`);
-          continue;
-        }
+  //       const [org, decimals] = await Promise.all([db.getOrgByWallet(address), getDecimals(client, token)]);
+  //       if (!org) {
+  //         console.error(`❌ No organization found for address: ${address}`);
+  //         continue;
+  //       }
 
-        const payout = formatUnits(amount, decimals);
-        const asset = getTokenByAddress(network, token);
-        if (!asset) {
-          console.error(`❌ No asset found for token: ${token}`);
-          continue;
-        }
+  //       const payout = formatUnits(amount, decimals);
+  //       const asset = getTokenByAddress(network, token);
+  //       if (!asset) {
+  //         console.error(`❌ No asset found for token: ${token}`);
+  //         continue;
+  //       }
 
-        const updatePayment = eventName === "SchedulePayout" ? updateSchedule : updateStream;
-        await Promise.all([
-          db.addUserTP(username, Number(payout)),
-          db.addTransaction({
-            recipient: username,
-            amount: payout,
-            tx_id: transactionHash,
-            org_id: org.id,
-            network,
-            asset,
-          }),
-          updatePayment(username, org, Number(payout)),
-        ]);
-      }
-    },
-  });
+  //       const updatePayment = eventName === "SchedulePayout" ? updateSchedule : updateStream;
+  //       await Promise.all([
+  //         db.addUserTP(username, Number(payout)),
+  //         // db.addTransaction({
+  //         //   recipient: username,
+  //         //   amount: payout,
+  //         //   tx_id: transactionHash,
+  //         //   org_id: org.id,
+  //         //   network,
+  //         //   asset,
+  //         // }),
+  //         updatePayment(username, org, Number(payout)),
+  //       ]);
+  //     }
+  //   },
+  // });
 
   client.watchEvent({
     events: parseAbi([
@@ -69,7 +69,6 @@ export default async function watch_transactions(network: network_type) {
         if (eventName === "StreamStateChanged") {
           args;
         }
-        const { username } = args;
       }
     },
   });

@@ -1,56 +1,61 @@
-type Wallet = {
-  id: number;
-  user_id: string; // maps to User's username
-  network: network_type;
-  address: Address;
-  sync: boolean;
-};
-
-type User = {
-  uid: number;
-  username: string;
-  email: string;
-  image: string;
-  total_payout: string; // bigint
-};
-
 type Organization = {
   id: string;
+  owner: string;
+  wallet: Address;
+  plugin: Address;
   name: string;
-  logo: string;
-  wallet: Address; // The contract address of the organization
-  owner: string; // User Id that maps to user from org
-  info: string | null;
-  network: network_type;
 };
 
 type Payment = {
-  id: number;
-  username: string; // Recipient of the funds
-  amount: number;
-  asset: Token;
-  org_id: string; // Organization making this payment
-  created_at: Date;
-  network: network_type;
-  active: boolean;
-  updated_at: Date;
-};
-
-type SchedulePayment = Payment & {
-  isOneTime: boolean;
-  nextPayout: number; // In timestamp value
-};
-
-type StreamPayment = Payment & {
-  endStream: number;
-  lastPayout: number; // In timestamp value
-};
-
-type Transaction = {
-  tx_id: string;
-  amount: string;
-  asset: Token;
-  network: network_type;
+  username: string;
+  amount: string; // Decimal
   org_id: string;
-  recipient: string; // alias for username
+  network: network_type;
+  asset: token;
+  id: string;
+  payout: string; // Decimal
+  active: boolean;
+  interval: interval_type;
+  role: string;
+  title: string;
 };
+
+type Schedule = Payment & {
+  isOneTime: boolean;
+  nextPayout: bigint;
+};
+
+type Stream = Payment & {
+  amountPerSec: string; // Decimal
+  lastPayout: bigint;
+  state: stream_state;
+};
+
+type transaction = {
+  tx_id: string;
+  amount: string; // Decimal
+  asset: token;
+  network: network_type;
+  recipient: string;
+  org_id: string;
+  username: string;
+  schedule_id: string | null;
+  stream_id: string | null;
+};
+
+type user = {
+  username: string | null;
+  image: string | null;
+  name: string | null;
+  total_payout: string; // Decimal
+  uid: string;
+  email: string | null;
+};
+
+type interval_type = "none" | "weekly" | "monthly" | "quarterly" | "yearly";
+
+type network_type = "Base";
+
+type token = "USDT" | "USDC";
+
+type stream_state = "inactive" | "active" | "paused" | "cancelled";

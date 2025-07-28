@@ -2,7 +2,7 @@
 
 import dotenv from "dotenv";
 import { createPublicClient, fallback, http } from "viem";
-import { arbitrumSepolia, baseSepolia, optimismSepolia } from "viem/chains";
+import { arbitrumSepolia, base, baseSepolia, optimismSepolia } from "viem/chains";
 
 dotenv.config();
 
@@ -19,7 +19,7 @@ export function getChain(network: network_type) {
     case "Arbitrum":
       return arbitrumSepolia;
     case "Base":
-      return baseSepolia;
+      return base;
     case "Optimism":
       return optimismSepolia;
   }
@@ -34,8 +34,8 @@ function getTransports(network: network_type) {
   const ALCHEMY_KEY = getEnvVariable("ALCHEMY_KEY");
 
   const infura_transport = `https://${_network}.infura.io/v3/${INFURA_KEY}`;
-  const quicknode_transport = `https://misty-little-mansion.${_network}.quiknode.pro/${QUICKNODE_KEY}`;
-  const alchemy_transport = `https://${_network}.g.alchemy.com/v2/${ALCHEMY_KEY}`;
+  const quicknode_transport = `https://misty-little-mansion.base-mainnet.quiknode.pro/${QUICKNODE_KEY}`;
+  const alchemy_transport = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`;
 
   return fallback([http(infura_transport), http(quicknode_transport), http(alchemy_transport)]);
 }

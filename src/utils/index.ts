@@ -11,11 +11,7 @@ export async function getDecimals(client: PublicClient, token: Address) {
   return decimals;
 }
 
-async function getRawBalance(
-  client: PublicClient,
-  token: Address,
-  contract: Address
-) {
+async function getRawBalance(client: PublicClient, token: Address, contract: Address) {
   const balanceOf = await client.readContract({
     abi: erc20Abi,
     address: token,
@@ -24,15 +20,15 @@ async function getRawBalance(
   });
   return balanceOf;
 }
-export async function getBalance(
-  client: PublicClient,
-  token: Address,
-  contract: Address
-) {
-  const [balanceOf, decimals] = await Promise.all([
-    getRawBalance(client, token, contract),
-    getDecimals(client, token),
-  ]);
+export async function getBalance(client: PublicClient, token: Address, contract: Address) {
+  const [balanceOf, decimals] = await Promise.all([getRawBalance(client, token, contract), getDecimals(client, token)]);
   const balance = formatUnits(balanceOf, decimals);
   return Number(balance);
+}
+
+export enum StreamState {
+  InActive,
+  Active, // Normal flow operation
+  Paused, // Temporarily stopped (flow rate = 0, metadata preserved)
+  Cancelled, // Permanently terminated (metadata cleared)
 }

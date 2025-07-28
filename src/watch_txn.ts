@@ -52,6 +52,27 @@ export default async function watch_transactions(network: network_type) {
       }
     },
   });
+
+  client.watchEvent({
+    events: parseAbi([
+      "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)",
+      "event StreamExecuted(string username, bytes32 streamId, address token, address recipient)",
+      "event StreamMigrated(string username, bytes32 indexed streamId, address oldRecipient, address indexed newRecipient)",
+      "event StreamStateChanged(string username, bytes32 indexed streamId, StreamState oldState, StreamState newState)",
+      "event FlowRateUpdated(string username, bytes32 indexed streamId, uint216 oldAmountPerSec, uint216 newAmountPerSec)",
+    ]),
+    strict: true,
+    fromBlock: BigInt(33442290),
+    onLogs: async (logs) => {
+      for (const log of logs) {
+        const { args, address, transactionHash, eventName } = log;
+        if (eventName === "StreamStateChanged") {
+          args;
+        }
+        const { username } = args;
+      }
+    },
+  });
 }
 
 async function updateSchedule(username: string, org: Organization, payout: number) {

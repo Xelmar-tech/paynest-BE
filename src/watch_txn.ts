@@ -4,7 +4,7 @@ import { formatUnits, parseAbi, keccak256, toBytes, getContract, decodeEventLog 
 import db from "./utils/db";
 import { createPubClient, type Client } from "./utils/config";
 import { getAddressByToken } from "./utils/token";
-import { getDecimals } from "./utils";
+import { getDecimals, StreamState } from "./utils";
 import { llamaPayAbi, paymentsPluginAbi } from "./utils/abi";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
@@ -49,6 +49,7 @@ export default async function watch_transactions(network: network_type) {
     onLogs: async (logs) => {
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
+        const { username } = args;
         const info =
           eventName === "ScheduleExecuted"
             ? await getScheduleInfo(client, args)
@@ -56,16 +57,39 @@ export default async function watch_transactions(network: network_type) {
 
         if (!info) continue;
 
-        // const txn: Transaction = {tx_id: transactionHash, network:"Base", }
+        const txn: Transaction = {
+          tx_id: transactionHash,
+          network: "Base",
+          amount: info.payout,
+          asset: info.asset,
+          recipient: info.recipient,
+          org_id: info.orgId,
+          username,
+          schedule_id: eventName === "ScheduleExecuted" ? args.scheduleId : null,
+          stream_id: eventName !== "ScheduleExecuted" ? args.streamId : null,
+        };
+
+        const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
+        // if stream state changed to active, payout should be 0 because it was cancelled and is restarting
+        const _payout =
+          eventName === "StreamStateChanged" ? (args.newState === StreamState.Active ? "0" : info.payout) : info.payout;
+        const _id = eventName === "ScheduleExecuted" ? args.scheduleId : args.streamId;
+
+        await Promise.all([
+          db.addTransaction(txn),
+          updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
+          db.addUserTP(username, Number(_payout)),
+        ]);
       }
     },
   });
 }
 
 async function getScheduleInfo(client: Client, args: ScheduleExecutedLogArgs) {
-  const decimals = await getDecimals(client, args.token);
+  const [decimals, schedule] = await Promise.all([getDecimals(client, args.token), db.getSchedule(args.scheduleId)]);
+  if (!schedule) return;
   const payout = formatUnits(args.amount, decimals);
-  return { payout, recipient: args.recipient };
+  return { payout, recipient: args.recipient, orgId: schedule.org_id, asset: schedule.asset };
 }
 
 async function getStreamInfo(client: Client, hash: Address, id: Address) {
@@ -93,13 +117,13 @@ async function getStreamInfo(client: Client, hash: Address, id: Address) {
     );
 
   const payout = formatUnits(withdraw.args.amount, decimals);
-  return { payout, recipient: withdraw.args.to };
+  return { payout, recipient: withdraw.args.to, orgId: stream.org_id, asset: stream.asset };
 }
 
 async function updateSchedule(
   client: Client,
   pluginAddr: Address,
-  data: { username: string; payout: number; scheduleId: Address }
+  data: { username: string; payout: number; id: Address }
 ) {
   const plugin = getContract({
     address: pluginAddr,
@@ -107,7 +131,7 @@ async function updateSchedule(
     client,
   });
 
-  const schedule = await plugin.read.getSchedule([data.username, data.scheduleId]);
+  const schedule = await plugin.read.getSchedule([data.username, data.id]);
 
   const updateFields = {
     nextPayout: schedule.nextPayout,
@@ -115,13 +139,13 @@ async function updateSchedule(
     payout: data.payout,
   };
 
-  await db.updatePaymentModel("schedule", data.scheduleId, updateFields);
+  await db.updatePaymentModel("schedule", data.id, updateFields);
 }
 
 async function updateStream(
   client: Client,
   pluginAddr: Address,
-  data: { username: string; payout: number; streamId: Address }
+  data: { username: string; payout: number; id: Address }
 ) {
   const plugin = getContract({
     address: pluginAddr,
@@ -129,15 +153,15 @@ async function updateStream(
     client,
   });
 
-  const stream = await plugin.read.getStream([data.username, data.streamId]);
-  const activeState = stream.state === 1;
+  const stream = await plugin.read.getStream([data.username, data.id]);
+  const activeState = stream.state === StreamState.Active;
 
   const updateFields = {
     lastPayout: Math.floor(new Date().getTime() / 1000),
     active: activeState,
     payout: data.payout,
-    state: stream.state === 1 ? "active" : stream.state === 2 ? "paused" : "cancelled",
+    state: activeState ? "active" : stream.state === StreamState.Paused ? "paused" : "cancelled",
   };
 
-  await db.updatePaymentModel("stream", data.streamId, updateFields);
+  await db.updatePaymentModel("stream", data.id, updateFields);
 }

@@ -1,34 +1,17 @@
 /// <reference path="./types/chains.d.ts" />
 
-import { formatUnits, parseAbi } from "viem";
+import { formatUnits, parseAbi, keccak256, toBytes, getContract, decodeEventLog } from "viem";
 import db from "./utils/db";
-import { createPubClient } from "./utils/config";
-import { getTokenByAddress } from "./utils/token";
+import { createPubClient, type Client } from "./utils/config";
+import { getAddressByToken } from "./utils/token";
 import { getDecimals } from "./utils";
-import abi from "./utils/abi";
+import { llamaPayAbi, paymentsPluginAbi } from "./utils/abi";
+
+const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
+const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
 
 export default async function watch_transactions(network: network_type) {
   const client = createPubClient(network);
-  const latestBlock = await client.getBlockNumber();
-
-  // client.watchEvent({
-  //   events: parseAbi([
-  //     "event StreamPayout(string username,address token,uint256 amount)",
-  //     "event SchedulePayout(string username,address token,uint256 amount)",
-  //   ]),
-  //   strict: true,
-  //   fromBlock: latestBlock,
-  //   onLogs: async (logs) => {
-  //     for (const log of logs) {
-  //       const { args, address, transactionHash, eventName } = log;
-  //       const { username, token, amount } = args;
-
-  //       const [org, decimals] = await Promise.all([db.getOrgByWallet(address), getDecimals(client, token)]);
-  //       if (!org) {
-  //         console.error(`❌ No organization found for address: ${address}`);
-  //         continue;
-  //       }
-
   //       const payout = formatUnits(amount, decimals);
   //       const asset = getTokenByAddress(network, token);
   //       if (!asset) {
@@ -58,7 +41,7 @@ export default async function watch_transactions(network: network_type) {
       "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)",
       "event StreamExecuted(string username, bytes32 streamId, address token, address recipient)",
       "event StreamMigrated(string username, bytes32 indexed streamId, address oldRecipient, address indexed newRecipient)",
-      "event StreamStateChanged(string username, bytes32 indexed streamId, StreamState oldState, StreamState newState)",
+      "event StreamStateChanged(string username, bytes32 indexed streamId, uint8 oldState, uint8 newState)",
       "event FlowRateUpdated(string username, bytes32 indexed streamId, uint216 oldAmountPerSec, uint216 newAmountPerSec)",
     ]),
     strict: true,
@@ -66,64 +49,95 @@ export default async function watch_transactions(network: network_type) {
     onLogs: async (logs) => {
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
-        if (eventName === "StreamStateChanged") {
-          args;
-        }
+        const info =
+          eventName === "ScheduleExecuted"
+            ? await getScheduleInfo(client, args)
+            : await getStreamInfo(client, transactionHash, args.streamId);
+
+        if (!info) continue;
+
+        // const txn: Transaction = {tx_id: transactionHash, network:"Base", }
       }
     },
   });
 }
 
-async function updateSchedule(username: string, org: Organization, payout: number) {
-  const client = createPubClient("Base");
-
-  const getSCPayment = client.readContract({
-    address: org.wallet,
-    abi: abi,
-    functionName: "getSchedule",
-    args: [username],
-  });
-
-  const [dbPayment, scPayment] = await Promise.all([db.findRecentSchedule(username, org.id), getSCPayment]);
-
-  if (dbPayment === null) {
-    console.error(`❌ Active Schedule Payment not found for ${username} on ${org.name}`);
-    return;
-  }
-
-  const updateFields = {
-    nextPayout: scPayment.nextPayout,
-    active: scPayment.active,
-    payout,
-  };
-
-  await db.updatePaymentModel("schedule", dbPayment.id, updateFields);
+async function getScheduleInfo(client: Client, args: ScheduleExecutedLogArgs) {
+  const decimals = await getDecimals(client, args.token);
+  const payout = formatUnits(args.amount, decimals);
+  return { payout, recipient: args.recipient };
 }
 
-async function updateStream(username: string, org: Organization, payout: number) {
-  const client = createPubClient("Base");
+async function getStreamInfo(client: Client, hash: Address, id: Address) {
+  const [{ logs }, stream] = await Promise.all([
+    client.getTransactionReceipt({
+      hash,
+    }),
+    db.getStream(id),
+  ]);
 
-  const getSCPayment = client.readContract({
-    address: org.wallet,
-    abi: abi,
-    functionName: "getStream",
-    args: [username],
-  });
+  if (!stream) return;
+  const token = getAddressByToken(stream.network, stream.asset);
+  if (!token) return;
 
-  const [dbPayment, scPayment] = await Promise.all([db.findRecentStream(username, org.id), getSCPayment]);
+  const decimals = await getDecimals(client, token);
 
-  if (dbPayment === null) {
-    console.error(`❌ Active Stream Payment not found for ${username} on ${org.name}`);
-    return;
-  }
+  const [withdraw] = logs
+    .filter((log) => log.topics[0] === withdrawTopic)
+    .map((log) =>
+      decodeEventLog({
+        abi: llamaPayAbi,
+        data: log.data,
+        topics: log.topics,
+      })
+    );
 
-  const updateFields = {
-    lastPayout: scPayment.lastPayout,
-    active: scPayment.active,
-    payout,
-  };
-
-  await db.updatePaymentModel("stream", dbPayment.id, updateFields);
+  const payout = formatUnits(withdraw.args.amount, decimals);
+  return { payout, recipient: withdraw.args.to };
 }
 
-export { updateSchedule, updateStream };
+async function updateSchedule(
+  client: Client,
+  pluginAddr: Address,
+  data: { username: string; payout: number; scheduleId: Address }
+) {
+  const plugin = getContract({
+    address: pluginAddr,
+    abi: paymentsPluginAbi,
+    client,
+  });
+
+  const schedule = await plugin.read.getSchedule([data.username, data.scheduleId]);
+
+  const updateFields = {
+    nextPayout: schedule.nextPayout,
+    active: schedule.active,
+    payout: data.payout,
+  };
+
+  await db.updatePaymentModel("schedule", data.scheduleId, updateFields);
+}
+
+async function updateStream(
+  client: Client,
+  pluginAddr: Address,
+  data: { username: string; payout: number; streamId: Address }
+) {
+  const plugin = getContract({
+    address: pluginAddr,
+    abi: paymentsPluginAbi,
+    client,
+  });
+
+  const stream = await plugin.read.getStream([data.username, data.streamId]);
+  const activeState = stream.state === 1;
+
+  const updateFields = {
+    lastPayout: Math.floor(new Date().getTime() / 1000),
+    active: activeState,
+    payout: data.payout,
+    state: stream.state === 1 ? "active" : stream.state === 2 ? "paused" : "cancelled",
+  };
+
+  await db.updatePaymentModel("stream", data.streamId, updateFields);
+}

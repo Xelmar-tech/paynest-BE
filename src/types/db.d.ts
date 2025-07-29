@@ -12,7 +12,7 @@ type Payment = {
   org_id: string;
   network: network_type;
   asset: token;
-  id: string;
+  id: Address;
   payout: string; // Decimal
   active: boolean;
   interval: interval_type;
@@ -31,7 +31,7 @@ type Stream = Payment & {
   state: stream_state;
 };
 
-type transaction = {
+type Transaction = {
   tx_id: string;
   amount: string; // Decimal
   asset: token;
@@ -43,7 +43,7 @@ type transaction = {
   stream_id: string | null;
 };
 
-type user = {
+type User = {
   username: string | null;
   image: string | null;
   name: string | null;

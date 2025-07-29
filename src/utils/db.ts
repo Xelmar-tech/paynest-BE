@@ -19,15 +19,22 @@ class DB {
     ) as unknown as Schedule[];
   }
 
+  public async getStream(id: string) {
+    const stream = (await this.sql(`SELECT * FROM public.stream WHERE id = $1`, [id])) as unknown as Stream[];
+    if (stream.length === 1) return stream[0];
+    return null;
+  }
+
+  public async getSchedule(id: string) {
+    const schedule = (await this.sql(`SELECT * FROM public.schedule WHERE id = $1`, [id])) as unknown as Schedule[];
+    if (schedule.length === 1) return schedule[0];
+    return null;
+  }
+
   public async getOrg(id: string) {
     const org = (await this.sql(`SELECT * FROM public.organization WHERE id = $1`, [id])) as unknown as Organization[];
     if (org.length === 1) return org[0];
     return null;
-  }
-
-  public async getOrgsWallets() {
-    const orgs = (await this.sql(`SELECT * FROM public.organization`)) as unknown as Organization[];
-    return orgs.map((org) => org.wallet);
   }
 
   public async getOrgByWallet(wallet: string) {
@@ -37,7 +44,7 @@ class DB {
     return org.length === 1 ? org[0] : null;
   }
 
-  public async addTransaction(tx: transaction) {
+  public async addTransaction(tx: Transaction) {
     const { tx_id, amount, asset, network, org_id, recipient } = tx;
     await this.sql(
       `
@@ -58,30 +65,11 @@ class DB {
     );
   }
 
-  public async findRecentSchedule(username: string, orgId: string): Promise<Schedule | null> {
-    const result = await this.sql(
-      `SELECT * FROM public.schedule
-       WHERE username = $1
-         AND org_id = $2
-         AND active = true
-       LIMIT 1`,
-      [username, orgId]
-    );
-    return (result[0] as Schedule) ?? null;
-  }
-  public async findRecentStream(username: string, orgId: string): Promise<Stream | null> {
-    const result = await this.sql(
-      `SELECT * FROM public.stream
-       WHERE username = $1
-         AND org_id = $2
-         AND active = true
-       LIMIT 1`,
-      [username, orgId]
-    );
-    return (result[0] as Stream) ?? null;
-  }
-
-  public async updatePaymentModel(table: "schedule" | "stream", id: string, fields: Record<string, boolean | number>) {
+  public async updatePaymentModel(
+    table: "schedule" | "stream",
+    id: string,
+    fields: Record<string, boolean | number | string>
+  ) {
     const updates: string[] = [];
     const values: any[] = [id];
     let paramIndex = 2;

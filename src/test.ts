@@ -1,8 +1,6 @@
-import { decodeEventLog, formatUnits, keccak256, parseAbi, toBytes } from "viem";
+import { decodeEventLog, formatUnits, parseAbi } from "viem";
 import { createPubClient } from "./utils/config";
 import { llamaPayAbi } from "./utils/abi";
-
-const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
 
 async function main() {
   const client = createPubClient("Base");
@@ -15,30 +13,29 @@ async function main() {
     strict: true,
     fromBlock: BigInt(33456608),
     toBlock: BigInt(33456628),
-    // address: "0xF6286E35AECf58C3d28A1F6f2C5C748F48B2678A",
   });
 
-  if (log.eventName === "FlowRateUpdated") {
-    const { logs } = await client.getTransactionReceipt({
-      hash: log.transactionHash,
-    });
+  // if (log.eventName === "FlowRateUpdated") {
+  //   const { logs } = await client.getTransactionReceipt({
+  //     hash: log.transactionHash,
+  //   });
 
-    const withdraws = logs
-      .filter((log) => log.topics[0] === withdrawTopic)
-      .map((log) =>
-        decodeEventLog({
-          abi: llamaPayAbi,
-          data: log.data,
-          topics: log.topics,
-        })
-      );
+  //   const withdraws = logs
+  //     .filter((log) => log.topics[0] === withdrawTopic)
+  //     .map((log) =>
+  //       decodeEventLog({
+  //         abi: llamaPayAbi,
+  //         data: log.data,
+  //         topics: log.topics,
+  //       })
+  //     );
 
-    const decimals = 18;
+  //   const decimals = 18;
 
-    for (const { args } of withdraws) {
-      const payout = formatUnits(args.amount, decimals);
-      console.log("Withdraw:", args.streamId, args.amount, payout);
-    }
-  }
+  //   for (const { args } of withdraws) {
+  //     const payout = formatUnits(args.amount, decimals);
+  //     console.log("Withdraw:", args.streamId, args.amount, payout);
+  //   }
+  // }
 }
 main();

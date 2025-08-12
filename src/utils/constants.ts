@@ -14,4 +14,4 @@ export async function getConsts(network: network_type, key = PaymentKey) {
   return { CONSTS, gas, pubClient };
 }
 
-export const paynestDaoFactory = "0x51F634181405681277318ce15ed864025f80B386";
+export const paynestDaoFactory = "0xD45F4bEF63BED11e9A67822A2774858D8859FcF3";

@@ -44,6 +44,13 @@ class DB {
     return org.length === 1 ? org[0] : null;
   }
 
+  public async getOrgByPaynestPlugin(plugin: string) {
+    const org = (await this.sql(`SELECT * FROM public.organization WHERE LOWER(plugin) = LOWER($1)`, [
+      plugin,
+    ])) as unknown as Organization[];
+    return org.length === 1 ? org[0] : null;
+  }
+
   public async addTransaction(tx: Transaction) {
     const { tx_id, amount, asset, network, org_id, recipient } = tx;
     await this.sql(

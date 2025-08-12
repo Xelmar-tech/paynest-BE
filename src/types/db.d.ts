@@ -52,7 +52,7 @@ type User = {
   email: string | null;
 };
 
-type interval_type = "none" | "weekly" | "monthly" | "quarterly" | "yearly";
+type interval_type = "daily" | "weekly" | "biweekly" | "monthly" | "quarterly" | "semiannual" | "yearly";
 
 type network_type = "Base";
 

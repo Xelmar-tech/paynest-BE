@@ -28,7 +28,7 @@ export async function getBalance(client: PublicClient, token: Address, contract:
 
 export enum StreamState {
   InActive,
-  Active, // Normal flow operation
-  Paused, // Temporarily stopped (flow rate = 0, metadata preserved)
-  Cancelled, // Permanently terminated (metadata cleared)
+  Active,
+  Paused,
+  Cancelled,
 }

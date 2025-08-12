@@ -2,13 +2,6 @@ const paymentsPluginAbi = [
   { type: "constructor", inputs: [], stateMutability: "nonpayable" },
   {
     type: "function",
-    name: "DEFAULT_FUNDING_PERIOD",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "MANAGER_PERMISSION_ID",
     inputs: [],
     outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
@@ -69,6 +62,7 @@ const paymentsPluginAbi = [
       { name: "username", type: "string", internalType: "string" },
       { name: "token", type: "address", internalType: "address" },
       { name: "amountPerSec", type: "uint216", internalType: "uint216" },
+      { name: "fundingPeriod", type: "uint8", internalType: "enum IPayments.IntervalType" },
     ],
     outputs: [{ name: "streamId", type: "bytes32", internalType: "bytes32" }],
     stateMutability: "nonpayable",
@@ -79,6 +73,16 @@ const paymentsPluginAbi = [
     inputs: [],
     outputs: [{ name: "", type: "address", internalType: "contract IDAO" }],
     stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "depositStreamFunds",
+    inputs: [
+      { name: "token", type: "address", internalType: "address" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -166,6 +170,16 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
+    name: "getStreamRecipient",
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "streamId", type: "bytes32", internalType: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "address", internalType: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "getTargetConfig",
     inputs: [],
     outputs: [
@@ -179,6 +193,20 @@ const paymentsPluginAbi = [
         ],
       },
     ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getUserScheduleIds",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [{ name: "", type: "bytes32[]", internalType: "bytes32[]" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getUserStreamIds",
+    inputs: [{ name: "username", type: "string", internalType: "string" }],
+    outputs: [{ name: "", type: "bytes32[]", internalType: "bytes32[]" }],
     stateMutability: "view",
   },
   {
@@ -266,24 +294,6 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "schedules",
-    inputs: [
-      { name: "", type: "string", internalType: "string" },
-      { name: "", type: "bytes32", internalType: "bytes32" },
-    ],
-    outputs: [
-      { name: "token", type: "address", internalType: "address" },
-      { name: "amount", type: "uint256", internalType: "uint256" },
-      { name: "interval", type: "uint8", internalType: "enum IPayments.IntervalType" },
-      { name: "isOneTime", type: "bool", internalType: "bool" },
-      { name: "active", type: "bool", internalType: "bool" },
-      { name: "firstPaymentDate", type: "uint40", internalType: "uint40" },
-      { name: "nextPayout", type: "uint40", internalType: "uint40" },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "setTargetConfig",
     inputs: [
       {
@@ -298,31 +308,6 @@ const paymentsPluginAbi = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "streamRecipients",
-    inputs: [
-      { name: "", type: "string", internalType: "string" },
-      { name: "", type: "bytes32", internalType: "bytes32" },
-    ],
-    outputs: [{ name: "", type: "address", internalType: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "streams",
-    inputs: [
-      { name: "", type: "string", internalType: "string" },
-      { name: "", type: "bytes32", internalType: "bytes32" },
-    ],
-    outputs: [
-      { name: "token", type: "address", internalType: "address" },
-      { name: "amountPerSec", type: "uint216", internalType: "uint216" },
-      { name: "state", type: "uint8", internalType: "enum IPayments.StreamState" },
-      { name: "startTime", type: "uint40", internalType: "uint40" },
-    ],
-    stateMutability: "view",
   },
   {
     type: "function",
@@ -387,26 +372,6 @@ const paymentsPluginAbi = [
     ],
     outputs: [],
     stateMutability: "payable",
-  },
-  {
-    type: "function",
-    name: "userScheduleIds",
-    inputs: [
-      { name: "", type: "string", internalType: "string" },
-      { name: "", type: "uint256", internalType: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "userStreamIds",
-    inputs: [
-      { name: "", type: "string", internalType: "string" },
-      { name: "", type: "uint256", internalType: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
-    stateMutability: "view",
   },
   {
     type: "function",

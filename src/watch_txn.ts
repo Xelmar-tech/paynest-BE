@@ -1,4 +1,5 @@
 /// <reference path="./types/chains.d.ts" />
+/// <reference path="./types/logs.d.ts" />
 
 import { formatUnits, parseAbi, keccak256, toBytes, getContract, decodeEventLog } from "viem";
 import db from "./utils/db";
@@ -8,33 +9,10 @@ import { getDecimals, StreamState } from "./utils";
 import { llamaPayAbi, paymentsPluginAbi } from "./utils/abi";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
-const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
+// const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
 
 export default async function watch_transactions(network: network_type) {
   const client = createPubClient(network);
-  //       const payout = formatUnits(amount, decimals);
-  //       const asset = getTokenByAddress(network, token);
-  //       if (!asset) {
-  //         console.error(`❌ No asset found for token: ${token}`);
-  //         continue;
-  //       }
-
-  //       const updatePayment = eventName === "SchedulePayout" ? updateSchedule : updateStream;
-  //       await Promise.all([
-  //         db.addUserTP(username, Number(payout)),
-  //         // db.addTransaction({
-  //         //   recipient: username,
-  //         //   amount: payout,
-  //         //   tx_id: transactionHash,
-  //         //   org_id: org.id,
-  //         //   network,
-  //         //   asset,
-  //         // }),
-  //         updatePayment(username, org, Number(payout)),
-  //       ]);
-  //     }
-  //   },
-  // });
 
   client.watchEvent({
     events: parseAbi([
@@ -45,7 +23,7 @@ export default async function watch_transactions(network: network_type) {
       "event FlowRateUpdated(string username, bytes32 indexed streamId, uint216 oldAmountPerSec, uint216 newAmountPerSec)",
     ]),
     strict: true,
-    fromBlock: BigInt(33442290),
+    fromBlock: BigInt(34125433),
     onLogs: async (logs) => {
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
@@ -69,17 +47,19 @@ export default async function watch_transactions(network: network_type) {
           stream_id: eventName !== "ScheduleExecuted" ? args.streamId : null,
         };
 
+        console.log(txn, info, address);
+
         const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
         // if stream state changed to active, payout should be 0 because it was cancelled and is restarting
         const _payout =
           eventName === "StreamStateChanged" ? (args.newState === StreamState.Active ? "0" : info.payout) : info.payout;
         const _id = eventName === "ScheduleExecuted" ? args.scheduleId : args.streamId;
 
-        await Promise.all([
-          db.addTransaction(txn),
-          updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
-          db.addUserTP(username, Number(_payout)),
-        ]);
+        // await Promise.all([
+        //   db.addTransaction(txn),
+        //   updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
+        //   db.addUserTP(username, Number(_payout)),
+        // ]);
       }
     },
   });

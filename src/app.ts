@@ -14,14 +14,6 @@ async function main() {
     }
   });
 
-  // cron.schedule("0 * * * *", async () => {
-  //   try {
-  //     await Promise.all(NETWORKS.map((n) => transactions(n)));
-  //   } catch (error) {
-  //     console.error("Error in fetching transactions", error);
-  //   }
-  // });
-
   watch_transactions("Base");
   console.log("Paynest Backend is running 🥳");
 }

@@ -13,7 +13,6 @@ const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes3
 
 export default async function watch_transactions(network: network_type) {
   const client = createPubClient(network);
-
   client.watchEvent({
     events: parseAbi([
       "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)",
@@ -47,19 +46,17 @@ export default async function watch_transactions(network: network_type) {
           stream_id: eventName !== "ScheduleExecuted" ? args.streamId : null,
         };
 
-        console.log(txn, info, address);
-
         const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
         // if stream state changed to active, payout should be 0 because it was cancelled and is restarting
         const _payout =
           eventName === "StreamStateChanged" ? (args.newState === StreamState.Active ? "0" : info.payout) : info.payout;
         const _id = eventName === "ScheduleExecuted" ? args.scheduleId : args.streamId;
 
-        // await Promise.all([
-        //   db.addTransaction(txn),
-        //   updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
-        //   db.addUserTP(username, Number(_payout)),
-        // ]);
+        await Promise.all([
+          db.addTransaction(txn),
+          updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
+          db.addUserTP(username, Number(_payout)),
+        ]);
       }
     },
   });
@@ -119,6 +116,8 @@ async function updateSchedule(
     payout: data.payout,
   };
 
+  // console.log(updateFields, schedule);
+
   await db.updatePaymentModel("schedule", data.id, updateFields);
 }
 
@@ -145,3 +144,5 @@ async function updateStream(
 
   await db.updatePaymentModel("stream", data.id, updateFields);
 }
+
+export { updateSchedule, updateStream, getScheduleInfo, getStreamInfo };

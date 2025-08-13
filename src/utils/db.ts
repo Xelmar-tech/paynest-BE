@@ -52,13 +52,13 @@ class DB {
   }
 
   public async addTransaction(tx: Transaction) {
-    const { tx_id, amount, asset, network, org_id, recipient } = tx;
+    const { tx_id, amount, asset, network, org_id, recipient, username, schedule_id, stream_id } = tx;
     await this.sql(
       `
-      INSERT INTO public.transaction (tx_id, amount, asset, network, org_id, recipient)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO public.transaction (tx_id, amount, asset, network, org_id, recipient, username, schedule_id, stream_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `,
-      [tx_id, amount, asset, network, org_id, recipient]
+      [tx_id, amount, asset, network, org_id, recipient, username, schedule_id, stream_id]
     );
   }
   public async addUserTP(username: string, amount: number) {

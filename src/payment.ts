@@ -1,11 +1,12 @@
 /// <reference path="./types/chains.d.ts" />
 
 import { getContract } from "viem";
-import db from "./utils/db";
+import { db } from "./utils/db";
 import { paymentsPluginAbi } from "./utils/abi";
 import { getConsts } from "./utils/constants";
 import { getBalance } from "./utils";
 import { getAddressByToken } from "./utils/token";
+import { informPaymentDelay, warnFailedPayment } from "./utils/email";
 
 export default async function payments(network: network_type) {
   const schedules = await db.getPendingSchedules();
@@ -25,11 +26,18 @@ export default async function payments(network: network_type) {
     const balance = await getBalance(pubClient, token, org.wallet);
 
     if (balance < Number(amount)) {
-      console.warn(
-        `The Organization wallet of ${org.name} has insufficient ${asset} to pay ${username} his scheduled ${Number(
-          amount
-        )}${asset}\nPlease top up the wallet in order to pay!`
-      );
+      const [owner, user] = await Promise.all([db.getUserByUsername(org.owner), db.getUserByUsername(username)]);
+      if (!owner?.email || !user?.email) {
+        console.error(
+          `Organization owner with username ${org.owner} or user with username ${username}, couldn't be found or email is null`
+        );
+        continue;
+      }
+      const params = { orgName: org.name, orgId: org.id, email: owner.email };
+      await Promise.all([
+        warnFailedPayment(params),
+        informPaymentDelay({ ...params, email: user.email, recipient: user.name || username }),
+      ]);
       continue;
     }
 

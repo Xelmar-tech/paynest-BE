@@ -2,12 +2,14 @@
 import cron from "node-cron";
 import payments from "./payment";
 import watch_transactions from "./watch_txn";
+import upcomingPayments from "./upcoming-payment";
 
 const NETWORKS: network_type[] = ["Base"]; // ["Arbitrum", "Base", "Optimism"];
 
 async function main() {
   cron.schedule("*/10 * * * *", async () => {
     try {
+      await upcomingPayments("Base");
       await Promise.all(NETWORKS.map((n) => payments(n)));
     } catch (error) {
       console.error("Error in fetching payments", error);

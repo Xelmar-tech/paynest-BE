@@ -19,14 +19,15 @@ const QUICKNODE = getEnvVariable("QUICKNODE");
 const ALCHEMY = getEnvVariable("ALCHEMY");
 
 export function getChain(network: network_type) {
-  switch (network) {
-    case "Arbitrum":
-      return arbitrumSepolia;
-    case "Base":
-      return base;
-    case "Optimism":
-      return optimismSepolia;
-  }
+  return base;
+  // switch (network) {
+  //   case "Arbitrum":
+  //     return arbitrumSepolia;
+  //   case "Base":
+  //     return base;
+  //   case "Optimism":
+  //     return optimismSepolia;
+  // }
 }
 
 export type Client = ReturnType<typeof createPubClient>;

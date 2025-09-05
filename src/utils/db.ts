@@ -3,11 +3,19 @@
 
 import { neon } from "@neondatabase/serverless";
 import { getEnvVariable } from "./config";
+import { Redis } from "@upstash/redis";
 
 class DB {
   private get sql() {
     const dbUrl = getEnvVariable("DATABASE_URL");
     return neon(dbUrl);
+  }
+
+  public async getUserByUsername(username: string) {
+    const user = (await this.sql(`SELECT * FROM public.user WHERE username = $1`, [username])) as unknown as User[];
+    console.log(user);
+    if (user.length === 1) return user[0];
+    return null;
   }
 
   public async getPendingSchedules() {
@@ -16,6 +24,21 @@ class DB {
     return this.sql(
       `SELECT * FROM public.schedule WHERE "nextPayout" <= $1 AND "active" = true ORDER BY "nextPayout" ASC`,
       [NOW]
+    ) as unknown as Schedule[];
+  }
+
+  public async getUpcomingSchedules() {
+    const NOW = Math.floor(Date.now() / 1000);
+    const ONE_HOUR = 3600;
+
+    return this.sql(
+      `SELECT * 
+       FROM public.schedule 
+       WHERE "nextPayout" > $1        
+         AND "nextPayout" <= $2 
+         AND "active" = true 
+       ORDER BY "nextPayout" ASC`,
+      [NOW + ONE_HOUR]
     ) as unknown as Schedule[];
   }
 
@@ -99,5 +122,9 @@ class DB {
 }
 
 const db = new DB();
+const redis = new Redis({
+  url: getEnvVariable("REDIS_URL"),
+  token: getEnvVariable("REDIS_TOKEN"),
+});
 
-export default db;
+export { db, redis };

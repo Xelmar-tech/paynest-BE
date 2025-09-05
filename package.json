@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@upstash/redis": "^1.35.3",
     "dotenv": "^16.4.7",
     "node-cron": "^3.0.3",
     "viem": "^2.22.10"

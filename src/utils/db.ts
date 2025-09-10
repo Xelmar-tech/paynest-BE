@@ -12,8 +12,10 @@ class DB {
   }
 
   public async getUserByUsername(username: string) {
-    const user = (await this.sql(`SELECT * FROM public.user WHERE username = $1`, [username])) as unknown as User[];
-    console.log(user);
+    const user = (await this.sql(
+      `SELECT * FROM public.user WHERE username = $1`,
+      [username]
+    )) as unknown as User[];
     if (user.length === 1) return user[0];
     return null;
   }
@@ -38,50 +40,81 @@ class DB {
          AND "nextPayout" <= $2 
          AND "active" = true 
        ORDER BY "nextPayout" ASC`,
-      [NOW + ONE_HOUR]
+      [NOW, NOW + ONE_HOUR]
     ) as unknown as Schedule[];
   }
 
   public async getStream(id: string) {
-    const stream = (await this.sql(`SELECT * FROM public.stream WHERE id = $1`, [id])) as unknown as Stream[];
+    const stream = (await this.sql(
+      `SELECT * FROM public.stream WHERE id = $1`,
+      [id]
+    )) as unknown as Stream[];
     if (stream.length === 1) return stream[0];
     return null;
   }
 
   public async getSchedule(id: string) {
-    const schedule = (await this.sql(`SELECT * FROM public.schedule WHERE id = $1`, [id])) as unknown as Schedule[];
+    const schedule = (await this.sql(
+      `SELECT * FROM public.schedule WHERE id = $1`,
+      [id]
+    )) as unknown as Schedule[];
     if (schedule.length === 1) return schedule[0];
     return null;
   }
 
   public async getOrg(id: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE id = $1`, [id])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE id = $1`,
+      [id]
+    )) as unknown as Organization[];
     if (org.length === 1) return org[0];
     return null;
   }
 
   public async getOrgByWallet(wallet: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`, [
-      wallet,
-    ])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE LOWER(wallet) = LOWER($1)`,
+      [wallet]
+    )) as unknown as Organization[];
     return org.length === 1 ? org[0] : null;
   }
 
   public async getOrgByPaynestPlugin(plugin: string) {
-    const org = (await this.sql(`SELECT * FROM public.organization WHERE LOWER(plugin) = LOWER($1)`, [
-      plugin,
-    ])) as unknown as Organization[];
+    const org = (await this.sql(
+      `SELECT * FROM public.organization WHERE LOWER(plugin) = LOWER($1)`,
+      [plugin]
+    )) as unknown as Organization[];
     return org.length === 1 ? org[0] : null;
   }
 
   public async addTransaction(tx: Transaction) {
-    const { tx_id, amount, asset, network, org_id, recipient, username, schedule_id, stream_id } = tx;
+    const {
+      tx_id,
+      amount,
+      asset,
+      network,
+      org_id,
+      recipient,
+      username,
+      schedule_id,
+      stream_id,
+    } = tx;
     await this.sql(
       `
       INSERT INTO public.transaction (tx_id, amount, asset, network, org_id, recipient, username, schedule_id, stream_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `,
-      [tx_id, amount, asset, network, org_id, recipient, username, schedule_id, stream_id]
+      [
+        tx_id,
+        amount,
+        asset,
+        network,
+        org_id,
+        recipient,
+        username,
+        schedule_id,
+        stream_id,
+      ]
     );
   }
   public async addUserTP(username: string, amount: number) {

@@ -2,7 +2,7 @@
 /// <reference path="./types/logs.d.ts" />
 
 import { formatUnits, parseAbi, keccak256, toBytes, getContract, decodeEventLog } from "viem";
-import db from "./utils/db";
+import { db } from "./utils/db";
 import { createPubClient, type Client } from "./utils/config";
 import { getAddressByToken } from "./utils/token";
 import { getDecimals, StreamState } from "./utils";

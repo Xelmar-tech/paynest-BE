@@ -1,8 +1,6 @@
 /// <reference path="./types/chains.d.ts" />
 
-import { getContract } from "viem";
 import { db } from "./utils/db";
-import { paymentsPluginAbi } from "./utils/abi";
 import { getConsts } from "./utils/constants";
 import { getBalance } from "./utils";
 import { getAddressByToken } from "./utils/token";

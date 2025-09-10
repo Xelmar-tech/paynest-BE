@@ -1,6 +1,6 @@
 /// <reference path="./types/chains.d.ts" />
 
-import { getContract } from "viem";
+import { ContractFunctionExecutionError, getContract } from "viem";
 import { db } from "./utils/db";
 import { paymentsPluginAbi } from "./utils/abi";
 import { getConsts } from "./utils/constants";
@@ -26,7 +26,10 @@ export default async function payments(network: network_type) {
     const balance = await getBalance(pubClient, token, org.wallet);
 
     if (balance < Number(amount)) {
-      const [owner, user] = await Promise.all([db.getUserByUsername(org.owner), db.getUserByUsername(username)]);
+      const [owner, user] = await Promise.all([
+        db.getUserByUsername(org.owner),
+        db.getUserByUsername(username),
+      ]);
       if (!owner?.email || !user?.email) {
         console.error(
           `Organization owner with username ${org.owner} or user with username ${username}, couldn't be found or email is null`
@@ -36,7 +39,11 @@ export default async function payments(network: network_type) {
       const params = { orgName: org.name, orgId: org.id, email: owner.email };
       await Promise.all([
         warnFailedPayment(params),
-        informPaymentDelay({ ...params, email: user.email, recipient: user.name || username }),
+        informPaymentDelay({
+          ...params,
+          email: user.email,
+          recipient: user.name || username,
+        }),
       ]);
       continue;
     }
@@ -50,19 +57,24 @@ export default async function payments(network: network_type) {
     try {
       await plugin.simulate.executeSchedule([username, id]);
     } catch (error) {
-      if ((error as any).metaMessages) {
-        const errorMessage = (error as any).metaMessages.join("\n");
-        console.error(`Simulation failed for ${username} on Org ${org.name}:\n${errorMessage}`);
+      if (error instanceof ContractFunctionExecutionError) {
+        const cause: string = (error.cause as any).data.errorName;
+        if (cause === "ScheduleNotActive") {
+          await db.updatePaymentModel("schedule", id, { active: false });
+        } else {
+          console.error(
+            `${error.cause.shortMessage}\n${error.cause.metaMessages?.[0]}`
+          );
+        }
       } else {
-        console.error(`Simulation failed for ${username} on Org ${org.name}~ ${JSON.stringify(error, null, 2)}`);
+        const errorMessage = (error as any).metaMessages.join("\n");
+        console.error(
+          `Simulation failed for ${username} on Org ${org.name}:\n${errorMessage}`
+        );
       }
-      continue; // skip this user if simulation fails
+      continue; // skip this user as simulation fails
     }
 
-    try {
-      await plugin.write.executeSchedule([username, id], CONSTS);
-    } catch {
-      continue;
-    }
+    await plugin.write.executeSchedule([username, id], CONSTS);
   }
 }

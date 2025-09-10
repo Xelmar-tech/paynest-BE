@@ -41,7 +41,6 @@ async function test() {
 
     try {
       await plugin.simulate.executeSchedule([username, id]);
-      console.log("Simulation was successful");
     } catch (error) {
       if (error instanceof ContractFunctionExecutionError) {
         const cause: string = (error.cause as any).data.errorName;

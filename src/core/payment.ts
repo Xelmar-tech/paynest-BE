@@ -103,7 +103,7 @@ export default async function scheduleUpcomingPayouts() {
     const runAt = Number(s.nextPayout) * 1000;
     const delay = runAt - now;
 
-    if (delay <= 0) executeSchedulePayment(s.id as `0x${string}`);
+    if (delay <= 0) await executeSchedulePayment(s.id as `0x${string}`);
     else setTimeout(() => executeSchedulePayment(s.id as `0x${string}`), delay);
   }
 }

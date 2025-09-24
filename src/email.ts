@@ -71,7 +71,7 @@ async function informPaymentDelay(user: EmailUserParams) {
   });
 }
 
-async function completeProfile(user: CompleteProfileParams) {
+async function completeProfileMail(user: CompleteProfileParams) {
   if (!(await spamCheck("complete-profile", "paynest-general", user.email))) return;
   const url = endpoint + "/complete-profile";
   await fetch(url, {
@@ -96,4 +96,4 @@ async function incomingPaymentSchedule(args: IncomingScheduledPaymentParams) {
   });
 }
 
-export { completeProfile, incomingPaymentSchedule, warnLowBalance, warnFailedPayment, informPaymentDelay };
+export { completeProfileMail, incomingPaymentSchedule, warnLowBalance, warnFailedPayment, informPaymentDelay };

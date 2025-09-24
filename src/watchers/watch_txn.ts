@@ -7,12 +7,15 @@ import { createPubClient, type Client } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
 import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
+import prisma from "../lib/prisma";
+import { stream_state } from "../generated/prisma";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
 // const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
 
-export default async function watch_transactions(network: network_type) {
-  const client = createPubClient(network);
+export default async function watch_transactions() {
+  const client = createPubClient("Base");
+
   client.watchEvent({
     events: parseAbi([
       "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)",
@@ -27,6 +30,7 @@ export default async function watch_transactions(network: network_type) {
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
         const { username } = args;
+
         const info =
           eventName === "ScheduleExecuted"
             ? await getScheduleInfo(client, args)
@@ -63,38 +67,56 @@ export default async function watch_transactions(network: network_type) {
 }
 
 async function getScheduleInfo(client: Client, args: ScheduleExecutedLogArgs) {
-  const [decimals, schedule] = await Promise.all([getDecimals(client, args.token), db.getSchedule(args.scheduleId)]);
-  if (!schedule) return;
-  const payout = formatUnits(args.amount, decimals);
-  return { payout, recipient: args.recipient, orgId: schedule.org_id, asset: schedule.asset };
+  try {
+    const [{ org_id, asset }, decimals] = await Promise.all([
+      prisma.schedule.findUniqueOrThrow({
+        where: { id: args.scheduleId },
+        select: { org_id: true, asset: true },
+      }),
+      getDecimals(client, args.token),
+    ]);
+
+    const payout = formatUnits(args.amount, decimals);
+    return { payout, recipient: args.recipient, orgId: org_id, asset };
+  } catch (error) {
+    console.error("Error in getScheduleInfo", error);
+    return;
+  }
 }
 
 async function getStreamInfo(client: Client, hash: Address, id: Address) {
-  const [{ logs }, stream] = await Promise.all([
-    client.getTransactionReceipt({
-      hash,
-    }),
-    db.getStream(id),
-  ]);
+  try {
+    const [{ logs }, { org_id, asset, network }] = await Promise.all([
+      client.getTransactionReceipt({
+        hash,
+      }),
+      prisma.stream.findUniqueOrThrow({
+        where: { id },
+        select: { org_id: true, asset: true, network: true },
+      }),
+    ]);
 
-  if (!stream) return;
-  const token = getAddressByToken(stream.network, stream.asset);
-  if (!token) return;
+    const token = getAddressByToken(network, asset);
+    if (!token) return;
 
-  const decimals = await getDecimals(client, token);
+    const decimals = await getDecimals(client, token);
 
-  const [withdraw] = logs
-    .filter((log) => log.topics[0] === withdrawTopic)
-    .map((log) =>
-      decodeEventLog({
-        abi: llamaPayAbi,
-        data: log.data,
-        topics: log.topics,
-      })
-    );
+    const [withdraw] = logs
+      .filter((log) => log.topics[0] === withdrawTopic)
+      .map((log) =>
+        decodeEventLog({
+          abi: llamaPayAbi,
+          data: log.data,
+          topics: log.topics,
+        })
+      );
 
-  const payout = formatUnits(withdraw.args.amount, decimals);
-  return { payout, recipient: withdraw.args.to, orgId: stream.org_id, asset: stream.asset };
+    const payout = formatUnits(withdraw.args.amount, decimals);
+    return { payout, recipient: withdraw.args.to, orgId: org_id, asset };
+  } catch (error) {
+    console.error("Error in getStreamInfo", error);
+    return;
+  }
 }
 
 async function updateSchedule(
@@ -116,9 +138,10 @@ async function updateSchedule(
     payout: data.payout,
   };
 
-  // console.log(updateFields, schedule);
-
-  await db.updatePaymentModel("schedule", data.id, updateFields);
+  await prisma.schedule.update({
+    where: { id: data.id },
+    data: updateFields,
+  });
 }
 
 async function updateStream(
@@ -139,10 +162,17 @@ async function updateStream(
     lastPayout: Math.floor(new Date().getTime() / 1000),
     active: activeState,
     payout: data.payout,
-    state: activeState ? "active" : stream.state === StreamState.Paused ? "paused" : "cancelled",
+    state: activeState
+      ? stream_state.active
+      : stream.state === StreamState.Paused
+      ? stream_state.paused
+      : stream_state.cancelled,
   };
 
-  await db.updatePaymentModel("stream", data.id, updateFields);
+  await prisma.stream.update({
+    where: { id: data.id },
+    data: updateFields,
+  });
 }
 
 export { updateSchedule, updateStream, getScheduleInfo, getStreamInfo };

@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model organization {
+  id           String        @id
+  owner        String
+  wallet       String        @unique
+  plugin       String        @unique
+  admin        String        @unique
+  logo         String
+  name         String        @unique
+  info         String
+  network      network_type
+  streams      stream[]
+  schedules    schedule[]
+  transactions transaction[]
+}
+
+model schedule {
+  username   String
+  amount     Decimal       @db.Decimal(18, 8)
+  isOneTime  Boolean       @default(false)
+  org_id     String
+  nextPayout BigInt
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  network    network_type
+  asset      token
+  id         String        @id
+  role       String
+  title      String
+  active     Boolean       @default(true)
+  interval   interval_type
+  payout     Decimal       @default(0) @db.Decimal
+
+  user user          @relation(fields: [username], references: [username])
+  org  organization  @relation(fields: [org_id], references: [id])
+  txns transaction[]
+}
+
+model stream {
+  username   String
+  amount     Decimal       @db.Decimal(18, 8)
+  org_id     String
+  lastPayout BigInt        @default(dbgenerated("(EXTRACT(epoch FROM now()))::bigint"))
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  network    network_type
+  asset      token
+  id         String        @id
+  payout     Decimal       @default(0) @db.Decimal
+  role       String
+  title      String
+  state      stream_state  @default(active)
+  active     Boolean       @default(true)
+  interval   interval_type
+
+  user user          @relation(fields: [username], references: [username])
+  org  organization  @relation(fields: [org_id], references: [id])
+  txns transaction[]
+}
+
+model transaction {
+  tx_id      String       @id
+  amount     Decimal      @db.Decimal
+  asset      token
+  network    network_type
+  created_at DateTime     @default(now())
+  recipient  String
+
+  org_id      String
+  username    String
+  schedule_id String?
+  stream_id   String?
+
+  org      organization @relation(fields: [org_id], references: [id])
+  user     user         @relation(fields: [username], references: [username])
+  schedule schedule?    @relation(fields: [schedule_id], references: [id])
+  stream   stream?      @relation(fields: [stream_id], references: [id])
+}
+
+model user {
+  username     String?       @unique
+  image        String?
+  name         String?
+  total_payout Decimal       @default(0) @db.Decimal
+  uid          String        @id
+  email        String?       @unique
+  streams      stream[]
+  schedules    schedule[]
+  wallets      wallet[]
+  txns         transaction[]
+}
+
+model waitlist {
+  email   String  @id
+  name    String?
+  company String?
+}
+
+model wallet {
+  username String
+  network  network_type
+  address  String
+  id       Int          @id @default(autoincrement())
+
+  user user @relation(fields: [username], references: [username])
+
+  @@unique([username, network], map: "unique_user_network")
+}
+
+enum interval_type {
+  daily
+  weekly
+  biweekly
+  monthly
+  quarterly
+  semiannual
+  yearly
+}
+
+enum network_type {
+  Base
+  // Arbitrum
+  // Optimism
+}
+
+enum token {
+  USDT
+  USDC
+}
+
+enum stream_state {
+  inactive
+  active
+  paused
+  cancelled
+}

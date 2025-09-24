@@ -1,8 +1,9 @@
 /// <reference path="./types/chains.d.ts" />
 import cron from "node-cron";
-import payments from "./payment";
-import watch_transactions from "./watch_txn";
-import upcomingPayments from "./upcoming-payment";
+import payments from "./core/payment";
+import watch_transactions from "./watchers/watch_txn";
+import upcomingPayments from "./crons/upcoming-payment";
+import watch_events from "./watchers/watch_events";
 
 const NETWORKS: network_type[] = ["Base"]; // ["Arbitrum", "Base", "Optimism"];
 
@@ -17,6 +18,7 @@ async function main() {
   });
 
   watch_transactions("Base");
+  watch_events();
   console.log("Paynest Backend is running 🥳");
 }
 

@@ -96,12 +96,13 @@ async function handleSimulationError(error: unknown, id: string, username: strin
 }
 
 export default async function scheduleUpcomingPayouts() {
-  const now = Math.floor(Date.now() / 1000);
+  const nowMs = Date.now();
+  const now = Math.floor(nowMs / 1000);
   const schedules = await loadUpcomingSchedules(now);
 
   for (const s of schedules) {
     const runAt = Number(s.nextPayout) * 1000;
-    const delay = runAt - now;
+    const delay = runAt - nowMs;
 
     if (delay <= 0) await executeSchedulePayment(s.id as `0x${string}`);
     else setTimeout(() => executeSchedulePayment(s.id as `0x${string}`), delay);

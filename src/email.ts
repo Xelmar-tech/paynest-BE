@@ -1,7 +1,7 @@
 /// <reference path="./types/emails.d.ts" />
 
+import redis from "./lib/redis";
 import { getEnvVariable } from "./utils/config";
-import { redis } from "./utils/db";
 
 const endpoint = "https://app.paynest.xyz/api/email";
 const key = getEnvVariable("EMAIL_API_KEY");

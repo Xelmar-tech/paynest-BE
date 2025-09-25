@@ -2,7 +2,6 @@
 /// <reference path="../types/logs.d.ts" />
 
 import { formatUnits, parseAbi, keccak256, toBytes, getContract, decodeEventLog } from "viem";
-import { db } from "../utils/db";
 import { createPubClient, type Client } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
@@ -38,7 +37,7 @@ export default async function watch_transactions() {
 
         if (!info) continue;
 
-        const txn: Transaction = {
+        const txn = {
           tx_id: transactionHash,
           network: "Base",
           amount: info.payout,
@@ -48,7 +47,7 @@ export default async function watch_transactions() {
           username,
           schedule_id: eventName === "ScheduleExecuted" ? args.scheduleId : null,
           stream_id: eventName !== "ScheduleExecuted" ? args.streamId : null,
-        };
+        } as const;
 
         const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
         // if stream state changed to active, payout should be 0 because it was cancelled and is restarting
@@ -57,9 +56,9 @@ export default async function watch_transactions() {
         const _id = eventName === "ScheduleExecuted" ? args.scheduleId : args.streamId;
 
         await Promise.all([
-          db.addTransaction(txn),
+          prisma.transaction.create({ data: txn }),
           updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
-          db.addUserTP(username, Number(_payout)),
+          prisma.user.update({ where: { username }, data: { total_payout: { increment: Number(_payout) } } }),
         ]);
       }
     },

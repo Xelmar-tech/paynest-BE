@@ -2,9 +2,9 @@
 /// <reference path="../types/logs.d.ts" />
 
 import { parseAbiItem } from "viem";
-import { db } from "../utils/db";
 import { createPubClient } from "../utils/config";
 import { getScheduleInfo, updateSchedule } from "../watchers/watch_txn";
+import prisma from "../lib/prisma";
 
 export default async function fetchPastMissingTxns(network: network_type) {
   const client = createPubClient(network);
@@ -20,7 +20,10 @@ export default async function fetchPastMissingTxns(network: network_type) {
 
   for (const log of logs) {
     const { args, address, transactionHash } = log;
-    const existingTx = await db.getTransaction(transactionHash);
+    const existingTx = await prisma.transaction.findUnique({
+      where: { tx_id: transactionHash },
+      select: { tx_id: true },
+    });
     if (existingTx) continue;
 
     const { username, scheduleId } = args;
@@ -32,7 +35,7 @@ export default async function fetchPastMissingTxns(network: network_type) {
       continue;
     }
 
-    const txn: Transaction = {
+    const txn = {
       tx_id: transactionHash,
       network: "Base",
       amount: info.payout,
@@ -42,14 +45,14 @@ export default async function fetchPastMissingTxns(network: network_type) {
       username,
       schedule_id: scheduleId,
       stream_id: null,
-    };
+    } as const;
 
     const payout = Number(info.payout);
 
     await Promise.all([
-      db.addTransaction(txn),
       updateSchedule(client, address, { username, payout, id: scheduleId }),
-      db.addUserTP(username, payout),
+      prisma.transaction.create({ data: txn }),
+      prisma.user.update({ where: { username }, data: { total_payout: { increment: payout } } }),
     ]);
   }
 }

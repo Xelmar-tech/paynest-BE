@@ -1,10 +1,10 @@
 import { formatUnits, parseAbi } from "viem";
 import { createPubClient } from "../utils/config";
-import { db } from "../utils/db";
 import { getDecimals } from "../utils/onchain-utils";
 import { formatEmailDate } from "../utils/date";
 import { getTokenByAddress } from "../utils/token";
 import { incomingPaymentSchedule } from "../email";
+import prisma from "../lib/prisma";
 
 export default function watch_events() {
   const client = createPubClient("Base");
@@ -20,8 +20,8 @@ export default function watch_events() {
         const { args, address } = log;
         const { username, firstPaymentDate } = log.args;
         const [org, user, decimals] = await Promise.all([
-          db.getOrgByPaynestPlugin(address),
-          db.getUserByUsername(username),
+          prisma.organization.findUnique({ where: { plugin: address }, select: { name: true } }),
+          prisma.user.findUnique({ where: { username }, select: { name: true, email: true } }),
           getDecimals(client, args.token),
         ]);
 

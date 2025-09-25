@@ -8,7 +8,8 @@ import completeProfile from "./crons/complete-profile";
 async function main() {
   cron.schedule("*/10 * * * *", async () => {
     try {
-      await Promise.all([upcomingPayments, payments]);
+      await payments();
+      await upcomingPayments();
     } catch (error) {
       console.error("Error in fetching payments", error);
     }
@@ -22,6 +23,7 @@ async function main() {
     }
   });
 
+  await Promise.all([upcomingPayments(), payments(), completeProfile()]);
   watch_transactions();
   watch_events();
   console.log("Paynest Backend is running 🥳");

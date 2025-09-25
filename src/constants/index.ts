@@ -1,7 +1,6 @@
-/// <reference path="../types/chains.d.ts" />
-
-import { privateKeyToAccount } from "viem/accounts";
+import { type Address, privateKeyToAccount } from "viem/accounts";
 import { createPubClient, getChain, getEnvVariable } from "../utils/config";
+import type { network_type } from "../generated/prisma";
 
 export const PaymentKey = getEnvVariable("PAYMENT_KEY") as Address;
 

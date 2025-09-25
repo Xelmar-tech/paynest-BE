@@ -1,4 +1,5 @@
-/// <reference path="../types/chains.d.ts" />
+import type { Address } from "viem";
+import type { network_type, token } from "../generated/prisma";
 
 export const TOKENS = {
   Base: {

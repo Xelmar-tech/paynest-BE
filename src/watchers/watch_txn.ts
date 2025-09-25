@@ -1,7 +1,14 @@
-/// <reference path="../types/chains.d.ts" />
 /// <reference path="../types/logs.d.ts" />
 
-import { formatUnits, parseAbi, keccak256, toBytes, getContract, decodeEventLog } from "viem";
+import {
+  formatUnits,
+  parseAbi,
+  keccak256,
+  toBytes,
+  getContract,
+  decodeEventLog,
+  type Address,
+} from "viem";
 import { createPubClient, type Client } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
@@ -9,7 +16,9 @@ import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
 import prisma from "../lib/prisma";
 import { stream_state } from "../generated/prisma";
 
-const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
+const withdrawTopic = keccak256(
+  toBytes("Withdraw(address,address,uint216,bytes32,uint256)")
+);
 // const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
 
 export default async function watch_transactions() {
@@ -45,20 +54,34 @@ export default async function watch_transactions() {
           recipient: info.recipient,
           org_id: info.orgId,
           username,
-          schedule_id: eventName === "ScheduleExecuted" ? args.scheduleId : null,
+          schedule_id:
+            eventName === "ScheduleExecuted" ? args.scheduleId : null,
           stream_id: eventName !== "ScheduleExecuted" ? args.streamId : null,
         } as const;
 
-        const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
+        const updatePayment =
+          eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
         // if stream state changed to active, payout should be 0 because it was cancelled and is restarting
         const _payout =
-          eventName === "StreamStateChanged" ? (args.newState === StreamState.Active ? "0" : info.payout) : info.payout;
-        const _id = eventName === "ScheduleExecuted" ? args.scheduleId : args.streamId;
+          eventName === "StreamStateChanged"
+            ? args.newState === StreamState.Active
+              ? "0"
+              : info.payout
+            : info.payout;
+        const _id =
+          eventName === "ScheduleExecuted" ? args.scheduleId : args.streamId;
 
         await Promise.all([
           prisma.transaction.create({ data: txn }),
-          updatePayment(client, address, { username, payout: Number(_payout), id: _id }),
-          prisma.user.update({ where: { username }, data: { total_payout: { increment: Number(_payout) } } }),
+          updatePayment(client, address, {
+            username,
+            payout: Number(_payout),
+            id: _id,
+          }),
+          prisma.user.update({
+            where: { username },
+            data: { total_payout: { increment: Number(_payout) } },
+          }),
         ]);
       }
     },

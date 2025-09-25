@@ -1,8 +1,7 @@
-/// <reference path="../types/chains.d.ts" />
-
 import dotenv from "dotenv";
 import { createPublicClient, fallback, http } from "viem";
-import { arbitrumSepolia, base, optimismSepolia } from "viem/chains";
+import { base } from "viem/chains";
+import type { network_type } from "../generated/prisma";
 
 dotenv.config();
 

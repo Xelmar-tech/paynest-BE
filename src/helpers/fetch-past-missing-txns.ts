@@ -1,10 +1,10 @@
-/// <reference path="../types/chains.d.ts" />
 /// <reference path="../types/logs.d.ts" />
 
 import { parseAbiItem } from "viem";
 import { createPubClient } from "../utils/config";
 import { getScheduleInfo, updateSchedule } from "../watchers/watch_txn";
 import prisma from "../lib/prisma";
+import type { network_type } from "../generated/prisma";
 
 export default async function fetchPastMissingTxns(network: network_type) {
   const client = createPubClient(network);
@@ -52,7 +52,10 @@ export default async function fetchPastMissingTxns(network: network_type) {
     await Promise.all([
       updateSchedule(client, address, { username, payout, id: scheduleId }),
       prisma.transaction.create({ data: txn }),
-      prisma.user.update({ where: { username }, data: { total_payout: { increment: payout } } }),
+      prisma.user.update({
+        where: { username },
+        data: { total_payout: { increment: payout } },
+      }),
     ]);
   }
 }

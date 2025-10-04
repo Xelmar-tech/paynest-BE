@@ -34,6 +34,6 @@ export function createPubClient(network: network_type) {
   const chain = getChain(network);
   return createPublicClient({
     chain,
-    transport: fallback([http(QUICKNODE), http(INFURA), http(ALCHEMY)]),
+    transport: fallback([http(QUICKNODE), http(INFURA)]),
   });
 }

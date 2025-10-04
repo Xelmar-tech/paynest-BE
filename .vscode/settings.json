@@ -1,0 +1,5 @@
+{
+  "debug.terminal.clearBeforeReusing": true,
+  "terminal.integrated.defaultLocation": "editor",
+  "terminal.integrated.defaultProfile.linux": ""
+}

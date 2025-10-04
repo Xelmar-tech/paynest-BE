@@ -23,9 +23,9 @@ async function main() {
     }
   });
 
-  await Promise.all([upcomingPayments(), payments(), completeProfile()]).catch(
-    (e) => console.error("Error in initial run", e)
-  );
+  await Promise.all([upcomingPayments(), payments(), completeProfile()])
+    .then(() => console.log("Initial run completed successfully"))
+    .catch((e) => console.error("Error in initial run", e));
 
   watch_transactions();
   watch_events();

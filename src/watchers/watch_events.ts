@@ -1,18 +1,22 @@
-import { formatUnits, parseAbi } from "viem";
+import { formatUnits } from "viem";
 import { createPubClient } from "../utils/config";
 import { getDecimals } from "../utils/onchain-utils";
 import { formatEmailDate } from "../utils/date";
 import { getTokenByAddress } from "../utils/token";
 import { incomingPaymentSchedule } from "../email";
 import prisma from "../lib/prisma";
+import { paymentsPluginAbi } from "../constants/abi";
 
 export default function watch_events() {
   const client = createPubClient("Base");
 
+  paymentsPluginAbi[44];
+
   client.watchEvent({
-    events: parseAbi([
-      "event ScheduleCreated(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint8 interval, address indexed recipient, bool isOneTime, uint40 firstPaymentDate)",
-    ]),
+    // events: parseAbi([
+    //   "event ScheduleCreated(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint8 interval, address indexed recipient, bool isOneTime, uint40 firstPaymentDate)",
+    // ]),
+    event: paymentsPluginAbi[44],
     strict: true,
     fromBlock: BigInt(35980400),
     onLogs: async (logs) => {

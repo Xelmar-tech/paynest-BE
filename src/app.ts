@@ -19,18 +19,19 @@ async function main() {
   });
 
   event.addListener(EVENT_NAME.SCHEDULE_CREATED, async (data: ScheduleCreatedLog) => {
+    console.log("Schedule event", data);
     const success = await scheduleCreatedEvent(data);
     if (success) await redis.del(EVENT_NAME.SCHEDULE_CREATED + ":" + data.transactionHash);
   });
 
-  // cron.schedule("*/10 * * * *", async () => {
-  //   try {
-  //     await payments();
-  //     await upcomingPayments();
-  //   } catch (error) {
-  //     console.error("Error in fetching payments", error);
-  //   }
-  // });
+  cron.schedule("*/10 * * * *", async () => {
+    try {
+      await payments();
+      await upcomingPayments();
+    } catch (error) {
+      console.error("Error in fetching payments", error);
+    }
+  });
 
   cron.schedule("30 9 * * *", async () => {
     try {
@@ -40,9 +41,9 @@ async function main() {
     }
   });
 
-  // await Promise.all([upcomingPayments(), payments(), completeProfile(), failedEvents()])
-  //   .then(() => console.log("Initial run completed successfully"))
-  //   .catch((e) => console.error("Error in initial run", e));
+  await Promise.all([upcomingPayments(), payments(), completeProfile(), failedEvents()])
+    .then(() => console.log("Initial run completed successfully"))
+    .catch((e) => console.error("Error in initial run", e));
 
   watch_transactions();
   watch_events();

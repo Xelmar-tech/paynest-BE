@@ -1,10 +1,5 @@
-import { event, EVENT_NAME } from "./lib/event";
+import fetchPastMissingTxns from "./helpers/fetch-past-missing-txns";
 
 (async () => {
-  console.log("test1");
-
-  event.addListener(EVENT_NAME.TEST, (...args) => {
-    console.log("Test event triggered,", ...args);
-  });
-  // await fetchPastMissingTxns("Base");
+  await fetchPastMissingTxns("Base");
 })();

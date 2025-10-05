@@ -2,6 +2,7 @@ import { createWSClient } from "../utils/config";
 import { paymentsPluginAbi } from "../constants/abi";
 import redis from "../lib/redis";
 import { event, EVENT_NAME } from "../lib/event";
+import { replacer } from "../utils";
 
 export default function watch_events() {
   const client = createWSClient("Base");
@@ -12,13 +13,14 @@ export default function watch_events() {
     // ]),
     event: paymentsPluginAbi[44],
     strict: true,
-    fromBlock: BigInt(35980400),
+    fromBlock: BigInt(36456334),
     onLogs: async (logs) => {
       console.log(logs.length, "Created Schedules logs from event watcher");
+
       for (const log of logs) {
         const { args, address, transactionHash } = log;
         const params = { args, address, transactionHash };
-        await redis.set(`${EVENT_NAME.SCHEDULE_CREATED}:${transactionHash}`, JSON.stringify(params));
+        await redis.set(`${EVENT_NAME.SCHEDULE_CREATED}:${transactionHash}`, JSON.stringify(params, replacer));
         event.emit(EVENT_NAME.SCHEDULE_CREATED, params);
       }
     },

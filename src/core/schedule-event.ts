@@ -1,6 +1,6 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { formatUnits } from "viem";
+import { checksumAddress, formatUnits } from "viem";
 import { createPubClient } from "../utils/config";
 import { getDecimals } from "../utils/onchain-utils";
 import { formatEmailDate } from "../utils/date";
@@ -14,13 +14,13 @@ async function scheduleCreatedEvent({ args, address }: ScheduleCreatedLog) {
 
   try {
     const [org, user, decimals] = await Promise.all([
-      prisma.organization.findUnique({ where: { plugin: address }, select: { name: true } }),
+      prisma.organization.findUnique({ where: { plugin: checksumAddress(address) }, select: { name: true } }),
       prisma.user.findUnique({ where: { username }, select: { name: true, email: true } }),
       getDecimals(client, args.token),
     ]);
 
     const token = getTokenByAddress("Base", args.token);
-    if (!org || !token || !user?.email) return true;
+    if (!org || !token || !user?.email) return false;
 
     const paymentDate = new Date(firstPaymentDate);
     const dateTime = formatEmailDate(paymentDate);

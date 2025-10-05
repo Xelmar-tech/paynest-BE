@@ -4,6 +4,7 @@ import { parseAbi } from "viem";
 import { createWSClient } from "../utils/config";
 import redis from "../lib/redis";
 import { event, EVENT_NAME } from "../lib/event";
+import { replacer } from "../utils";
 
 export default async function watch_transactions() {
   const client = createWSClient("Base");
@@ -17,13 +18,14 @@ export default async function watch_transactions() {
       "event FlowRateUpdated(string username, bytes32 indexed streamId, uint216 oldAmountPerSec, uint216 newAmountPerSec)",
     ]),
     strict: true,
-    fromBlock: BigInt(34125433),
+    fromBlock: BigInt(36456334),
     onLogs: async (logs) => {
       console.log(logs.length, "Transaction logs from event watcher");
+
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
         const params = { transactionHash, args, address, eventName };
-        await redis.set(`${EVENT_NAME.TRANSACTION}:${transactionHash}`, JSON.stringify(params));
+        await redis.set(`${EVENT_NAME.TRANSACTION}:${transactionHash}`, JSON.stringify(params, replacer));
         event.emit(EVENT_NAME.TRANSACTION, params);
       }
     },

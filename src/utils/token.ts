@@ -18,7 +18,7 @@ export const TOKENS = {
 export function getTokenByAddress(network: network_type, address: Address) {
   const networkTokens = TOKENS[network];
   return (Object.keys(networkTokens) as (keyof typeof networkTokens)[]).find(
-    (token) => networkTokens[token] == address
+    (token) => networkTokens[token].toLowerCase() == address.toLowerCase()
   );
 }
 

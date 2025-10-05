@@ -1,7 +1,10 @@
-import scheduleUpcomingPayouts from "./core/payment";
-import completeProfile from "./crons/complete-profile";
-import fetchPastMissingTxns from "./helpers/fetch-past-missing-txns";
+import { event, EVENT_NAME } from "./lib/event";
 
 (async () => {
-  await fetchPastMissingTxns("Base");
+  console.log("test1");
+
+  event.addListener(EVENT_NAME.TEST, (...args) => {
+    console.log("Test event triggered,", ...args);
+  });
+  // await fetchPastMissingTxns("Base");
 })();

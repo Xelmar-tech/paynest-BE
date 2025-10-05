@@ -20,8 +20,6 @@ export default async function watch_transactions() {
     strict: true,
     fromBlock: BigInt(36456334),
     onLogs: async (logs) => {
-      console.log(logs.length, "Transaction logs from event watcher");
-
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
         const params = { transactionHash, args, address, eventName };

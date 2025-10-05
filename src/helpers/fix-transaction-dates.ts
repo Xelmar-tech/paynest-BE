@@ -28,7 +28,6 @@ async function fixTransactionDate() {
 
   for (const txn of txns) {
     const date = await getTxDate(txn.tx_id as Address, client);
-    console.log(date, txn.created_at);
     await prisma.transaction.update({
       where: { tx_id: txn.tx_id },
       data: { created_at: date },

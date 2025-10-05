@@ -19,7 +19,6 @@ async function main() {
   });
 
   event.addListener(EVENT_NAME.SCHEDULE_CREATED, async (data: ScheduleCreatedLog) => {
-    console.log("Schedule event", data);
     const success = await scheduleCreatedEvent(data);
     if (success) await redis.del(EVENT_NAME.SCHEDULE_CREATED + ":" + data.transactionHash);
   });

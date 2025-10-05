@@ -17,8 +17,6 @@ export default async function fetchPastMissingTxns(network: network_type) {
     fromBlock: BigInt(36444428),
   });
 
-  console.log("Fetched logs", logs.length);
-
   for (const log of logs) {
     const { args, address, transactionHash } = log;
     const existingTx = await prisma.transaction.findUnique({
@@ -30,10 +28,7 @@ export default async function fetchPastMissingTxns(network: network_type) {
     const { username, scheduleId } = args;
     const info = await getScheduleInfo(client, args);
 
-    if (!info) {
-      console.log("No schedule info found for given args", args);
-      continue;
-    }
+    if (!info) continue;
 
     const date = await getTxDate(transactionHash, client);
     const txn = {
@@ -70,13 +65,5 @@ export default async function fetchPastMissingTxns(network: network_type) {
         data: { total_payout: { increment: payout } },
       });
     });
-    // await Promise.all([
-    //   updateSchedule(client, address, { username, payout, id: scheduleId }),
-    //   prisma.transaction.create({ data: txn }),
-    //   prisma.user.update({
-    //     where: { username },
-    //     data: { total_payout: { increment: payout } },
-    //   }),
-    // ]);
   }
 }

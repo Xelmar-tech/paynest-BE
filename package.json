@@ -4,6 +4,8 @@
   "main": "src/app.ts",
   "scripts": {
     "app": "ts-node src/app.ts",
+    "build": "tsc",
+    "start": "node --max-old-space-size=512 dst/app.js",
     "test": "ts-node src/test.ts",
     "postinstall": "prisma generate"
   },
@@ -17,7 +19,10 @@
     "@upstash/redis": "^1.35.3",
     "agenda": "^5.0.0",
     "dotenv": "^16.4.7",
+    "kysely": "^0.28.8",
     "node-cron": "^3.0.3",
+    "pg": "^8.16.3",
+    "prisma-kysely": "^2.2.1",
     "superjson": "^2.2.2",
     "viem": "^2.22.10"
   },

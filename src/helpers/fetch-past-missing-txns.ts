@@ -1,15 +1,14 @@
 /// <reference path="../types/logs.d.ts" />
 
 import { parseAbiItem } from "viem";
-import { createPubClient } from "../utils/config";
+import { pbClient } from "../utils/config";
 import { getScheduleInfo, updateSchedule } from "../core/transaction";
 import prisma from "../lib/prisma";
-import type { network_type } from "../generated/prisma";
+import type { network_type } from "@prisma/client";
 import { getTxDate } from "./fix-transaction-dates";
 
 export default async function fetchPastMissingTxns(network: network_type) {
-  const client = createPubClient(network);
-  const logs = await client.getLogs({
+  const logs = await pbClient.getLogs({
     event: parseAbiItem(
       "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)"
     ),
@@ -26,11 +25,11 @@ export default async function fetchPastMissingTxns(network: network_type) {
     if (existingTx) continue;
 
     const { username, scheduleId } = args;
-    const info = await getScheduleInfo(client, args);
+    const info = await getScheduleInfo(pbClient, args);
 
     if (!info) continue;
 
-    const date = await getTxDate(transactionHash, client);
+    const date = await getTxDate(transactionHash, pbClient);
     const txn = {
       tx_id: transactionHash,
       network: "Base",
@@ -50,7 +49,7 @@ export default async function fetchPastMissingTxns(network: network_type) {
       await tx.transaction.create({ data: txn });
 
       await updateSchedule(
-        client,
+        pbClient,
         address,
         {
           username,

@@ -5,7 +5,7 @@ import { getBalance } from "../utils/onchain-utils";
 import { getAddressByToken } from "../utils/token";
 import { informPaymentDelay, warnFailedPayment } from "../email";
 import prisma from "../lib/prisma";
-import type { organization } from "../generated/prisma";
+import type { organization } from "@prisma/client";
 
 async function loadUpcomingSchedules(now: number) {
   const schedules = await prisma.schedule.findMany({
@@ -23,36 +23,31 @@ async function loadUpcomingSchedules(now: number) {
 }
 
 async function executeSchedulePayment(id: `0x${string}`) {
-  const { username, asset, network, amount, org } =
-    await prisma.schedule.findUniqueOrThrow({
-      where: { id },
-      select: {
-        username: true,
-        asset: true,
-        amount: true,
-        network: true,
-        org: {
-          select: {
-            name: true,
-            owner: true,
-            wallet: true,
-            plugin: true,
-            id: true,
-          },
+  const { username, asset, network, amount, org } = await prisma.schedule.findUniqueOrThrow({
+    where: { id },
+    select: {
+      username: true,
+      asset: true,
+      amount: true,
+      network: true,
+      org: {
+        select: {
+          name: true,
+          owner: true,
+          wallet: true,
+          plugin: true,
+          id: true,
         },
       },
-    });
+    },
+  });
 
   const { CONSTS, pubClient } = await getConsts(network);
 
   const token = getAddressByToken(network, asset);
   if (!token) return;
 
-  const balance = await getBalance(
-    pubClient,
-    token,
-    org.wallet as `0x${string}`
-  );
+  const balance = await getBalance(pubClient, token, org.wallet as `0x${string}`);
   if (balance < Number(amount)) return await handleLowBalance(org, username);
 
   const plugin = getContract({
@@ -70,10 +65,7 @@ async function executeSchedulePayment(id: `0x${string}`) {
   await plugin.write.executeSchedule([username, id], CONSTS);
 }
 
-async function handleLowBalance(
-  org: Pick<organization, "owner" | "name" | "id">,
-  username: string
-) {
+async function handleLowBalance(org: Pick<organization, "owner" | "name" | "id">, username: string) {
   const [owner, user] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { username: org.owner },
@@ -103,26 +95,17 @@ async function handleLowBalance(
   ]);
 }
 
-async function handleSimulationError(
-  error: unknown,
-  id: string,
-  username: string,
-  orgName: string
-) {
+async function handleSimulationError(error: unknown, id: string, username: string, orgName: string) {
   if (error instanceof ContractFunctionExecutionError) {
     const cause: string = (error.cause as any).data.errorName;
     if (cause === "ScheduleNotActive") {
       await prisma.schedule.update({ where: { id }, data: { active: false } });
     } else {
-      console.error(
-        `${error.cause.shortMessage}\n${error.cause.metaMessages?.[0]}`
-      );
+      console.error(`${error.cause.shortMessage}\n${error.cause.metaMessages?.[0]}`);
     }
   } else {
     const errorMessage = (error as any).metaMessages.join("\n");
-    console.error(
-      `Simulation failed for ${username} on Org ${orgName}:\n${errorMessage}`
-    );
+    console.error(`Simulation failed for ${username} on Org ${orgName}:\n${errorMessage}`);
   }
 }
 

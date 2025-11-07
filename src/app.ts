@@ -11,6 +11,7 @@ import { event, EVENT_NAME } from "./lib/event";
 import addTransaction from "./core/transaction";
 import redis from "./lib/redis";
 import { scheduleCreatedEvent } from "./core/schedule-event";
+import { startHealthServer } from "./watchers/watchdog";
 
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
@@ -46,6 +47,7 @@ async function main() {
 
   watch_transactions();
   watch_events();
+  startHealthServer();
   console.log("Paynest Backend is running 🥳");
 }
 

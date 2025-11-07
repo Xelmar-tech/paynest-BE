@@ -1,5 +1,5 @@
 import { checksumAddress, formatUnits } from "viem";
-import { createPubClient } from "../utils/config";
+import { pbClient } from "../utils/config";
 import { getDecimals } from "../utils/onchain-utils";
 import { formatEmailDate } from "../utils/date";
 import { getTokenByAddress } from "../utils/token";
@@ -8,9 +8,7 @@ import prisma from "../lib/prisma";
 import { paymentsPluginAbi } from "../constants/abi";
 
 export default async function fetchCreatedSchedules() {
-  const client = createPubClient("Base");
-
-  const logs = await client.getLogs({
+  const logs = await pbClient.getLogs({
     event: paymentsPluginAbi[44],
     strict: true,
     fromBlock: BigInt(36315728),
@@ -22,7 +20,7 @@ export default async function fetchCreatedSchedules() {
     const [org, user, decimals] = await Promise.all([
       prisma.organization.findUnique({ where: { plugin: checksumAddress(address) }, select: { name: true } }),
       prisma.user.findUnique({ where: { username }, select: { name: true, email: true } }),
-      getDecimals(client, args.token),
+      getDecimals(pbClient, args.token),
     ]);
 
     const token = getTokenByAddress("Base", args.token);

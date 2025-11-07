@@ -1,5 +1,6 @@
-import fetchPastMissingTxns from "./helpers/fetch-past-missing-txns";
+import db from "./db";
 
 (async () => {
-  await fetchPastMissingTxns("Base");
+  const res = await db.selectFrom("organization").selectAll().execute();
+  console.log(res);
 })();

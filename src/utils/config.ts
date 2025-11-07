@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { createPublicClient, fallback, http, webSocket } from "viem";
 import { base } from "viem/chains";
-import type { network_type } from "../generated/prisma";
+import type { network_type } from "@prisma/client";
 
 dotenv.config();
 
@@ -19,30 +19,14 @@ const ALCHEMY = getEnvVariable("ALCHEMY");
 
 export function getChain(_network: network_type) {
   return base;
-  // switch (network) {
-  //   case "Arbitrum":
-  //     return arbitrumSepolia;
-  //   case "Base":
-  //     return base;
-  //   case "Optimism":
-  //     return optimismSepolia;
-  // }
 }
 
-export type Client = ReturnType<typeof createPubClient>;
-export function createPubClient(network: network_type) {
-  const chain = getChain(network);
-  return createPublicClient({
-    chain,
-    transport: fallback([http(QUICKNODE), http(ALCHEMY)]),
-  });
-}
+export const pbClient = createPublicClient({
+  chain: base,
+  transport: fallback([http(QUICKNODE), http(ALCHEMY)]),
+});
 
-export function createWSClient(network: network_type) {
-  const chain = getChain(network);
-
-  return createPublicClient({
-    chain,
-    transport: webSocket(INFURA),
-  });
-}
+export const wsClient = createPublicClient({
+  chain: base,
+  transport: webSocket(INFURA),
+});

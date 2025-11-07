@@ -1,15 +1,13 @@
 /// <reference path="../types/logs.d.ts" />
 
 import { parseAbi } from "viem";
-import { createWSClient } from "../utils/config";
+import { wsClient } from "../utils/config";
 import redis from "../lib/redis";
 import { event, EVENT_NAME } from "../lib/event";
 import { replacer } from "../utils";
 
 export default async function watch_transactions() {
-  const client = createWSClient("Base");
-
-  client.watchEvent({
+  wsClient.watchEvent({
     events: parseAbi([
       "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)",
       "event StreamExecuted(string username, bytes32 streamId, address token, address recipient)",

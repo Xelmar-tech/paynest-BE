@@ -1,8 +1,8 @@
 import type { Address } from "viem";
-import { createPubClient, type Client } from "../utils/config";
+import { pbClient } from "../utils/config";
 import prisma from "../lib/prisma";
 
-async function getTxDate(txHash: Address, client: Client) {
+async function getTxDate(txHash: Address, client: typeof pbClient) {
   const tx = await client.getTransaction({ hash: txHash });
   if (!tx.blockNumber) {
     throw new Error("Transaction not yet mined");
@@ -15,7 +15,6 @@ async function getTxDate(txHash: Address, client: Client) {
 }
 
 async function fixTransactionDate() {
-  const client = createPubClient("Base");
   const txns = await prisma.transaction.findMany({
     select: {
       tx_id: true,
@@ -27,7 +26,7 @@ async function fixTransactionDate() {
   });
 
   for (const txn of txns) {
-    const date = await getTxDate(txn.tx_id as Address, client);
+    const date = await getTxDate(txn.tx_id as Address, pbClient);
     await prisma.transaction.update({
       where: { tx_id: txn.tx_id },
       data: { created_at: date },

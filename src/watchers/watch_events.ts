@@ -1,13 +1,11 @@
-import { createWSClient } from "../utils/config";
+import { wsClient } from "../utils/config";
 import { paymentsPluginAbi } from "../constants/abi";
 import redis from "../lib/redis";
 import { event, EVENT_NAME } from "../lib/event";
 import { replacer } from "../utils";
 
 export default function watch_events() {
-  const client = createWSClient("Base");
-
-  client.watchEvent({
+  wsClient.watchEvent({
     event: paymentsPluginAbi[44],
     strict: true,
     fromBlock: BigInt(36456334),

@@ -1,14 +1,14 @@
 /// <reference path="../types/logs.d.ts" />
 
 import { formatUnits, keccak256, toBytes, getContract, decodeEventLog, type Address } from "viem";
-import { createPubClient, type Client } from "../utils/config";
+import { pbClient } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
 import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
 import prisma from "../lib/prisma";
-import { Prisma, PrismaClient, stream_state } from "../generated/prisma";
+import { Prisma, PrismaClient, stream_state } from "@prisma/client";
 import { getTxDate } from "../helpers/fix-transaction-dates";
-import { DefaultArgs } from "../generated/prisma/runtime/library";
+import { DefaultArgs } from "@prisma/client/runtime/library";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
 // const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
@@ -19,17 +19,16 @@ type PrismaTxType = Omit<
 >;
 
 export default async function addTransaction({ args, address, transactionHash, eventName }: TransactionLog) {
-  const client = createPubClient("Base");
   const { username } = args;
 
   try {
     const info = !("streamId" in args)
-      ? await getScheduleInfo(client, args)
-      : await getStreamInfo(client, transactionHash, args.streamId);
+      ? await getScheduleInfo(pbClient, args)
+      : await getStreamInfo(pbClient, transactionHash, args.streamId);
 
     if (!info) return false;
 
-    const date = await getTxDate(transactionHash, client);
+    const date = await getTxDate(transactionHash, pbClient);
     const txn = {
       tx_id: transactionHash,
       network: "Base",
@@ -60,7 +59,7 @@ export default async function addTransaction({ args, address, transactionHash, e
       await tx.transaction.create({ data: txn });
 
       await updatePayment(
-        client,
+        pbClient,
         address,
         {
           username,
@@ -82,7 +81,7 @@ export default async function addTransaction({ args, address, transactionHash, e
   }
 }
 
-async function getScheduleInfo(client: Client, args: ScheduleExecutedArgs) {
+async function getScheduleInfo(client: typeof pbClient, args: ScheduleExecutedArgs) {
   try {
     const [{ org_id, asset }, decimals] = await Promise.all([
       prisma.schedule.findUniqueOrThrow({
@@ -100,7 +99,7 @@ async function getScheduleInfo(client: Client, args: ScheduleExecutedArgs) {
   }
 }
 
-async function getStreamInfo(client: Client, hash: Address, id: Address) {
+async function getStreamInfo(client: typeof pbClient, hash: Address, id: Address) {
   try {
     const [{ logs }, { org_id, asset, network }] = await Promise.all([
       client.getTransactionReceipt({
@@ -136,7 +135,7 @@ async function getStreamInfo(client: Client, hash: Address, id: Address) {
 }
 
 async function updateSchedule(
-  client: Client,
+  client: typeof pbClient,
   pluginAddr: Address,
   data: { username: string; payout: number; id: Address },
   tx: PrismaTxType
@@ -162,7 +161,7 @@ async function updateSchedule(
 }
 
 async function updateStream(
-  client: Client,
+  client: typeof pbClient,
   pluginAddr: Address,
   data: { username: string; payout: number; id: Address },
   tx: PrismaTxType

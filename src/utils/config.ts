@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { createPublicClient, fallback, http, webSocket } from "viem";
 import { base } from "viem/chains";
-import type { network_type } from "@prisma/client";
+import type { network_type } from "../db/types";
 
 dotenv.config();
 

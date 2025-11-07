@@ -4,8 +4,8 @@ import { getDecimals } from "../utils/onchain-utils";
 import { formatEmailDate } from "../utils/date";
 import { getTokenByAddress } from "../utils/token";
 import { incomingPaymentSchedule } from "../email";
-import prisma from "../lib/prisma";
 import { paymentsPluginAbi } from "../constants/abi";
+import db from "../db";
 
 export default async function fetchCreatedSchedules() {
   const logs = await pbClient.getLogs({
@@ -18,8 +18,8 @@ export default async function fetchCreatedSchedules() {
     const { args, address } = log;
     const { username, firstPaymentDate } = log.args;
     const [org, user, decimals] = await Promise.all([
-      prisma.organization.findUnique({ where: { plugin: checksumAddress(address) }, select: { name: true } }),
-      prisma.user.findUnique({ where: { username }, select: { name: true, email: true } }),
+      db.selectFrom("organization").select("name").where("plugin", "=", checksumAddress(address)).executeTakeFirst(),
+      db.selectFrom("user").select(["name", "email"]).where("username", "=", username).executeTakeFirst(),
       getDecimals(pbClient, args.token),
     ]);
 

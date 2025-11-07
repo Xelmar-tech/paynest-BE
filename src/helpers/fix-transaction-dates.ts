@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { pbClient } from "../utils/config";
-import prisma from "../lib/prisma";
+import db from "../db";
 
 async function getTxDate(txHash: Address, client: typeof pbClient) {
   const tx = await client.getTransaction({ hash: txHash });
@@ -15,22 +15,15 @@ async function getTxDate(txHash: Address, client: typeof pbClient) {
 }
 
 async function fixTransactionDate() {
-  const txns = await prisma.transaction.findMany({
-    select: {
-      tx_id: true,
-      created_at: true,
-    },
-    orderBy: {
-      created_at: "desc",
-    },
-  });
+  const txns = await db
+    .selectFrom("transaction")
+    .select(["tx_id", "created_at"])
+    .orderBy("created_at", "desc")
+    .execute();
 
   for (const txn of txns) {
     const date = await getTxDate(txn.tx_id as Address, pbClient);
-    await prisma.transaction.update({
-      where: { tx_id: txn.tx_id },
-      data: { created_at: date },
-    });
+    await db.updateTable("transaction").set({ created_at: date }).where("tx_id", "=", txn.tx_id).execute();
   }
 }
 

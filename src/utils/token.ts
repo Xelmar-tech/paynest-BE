@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { network_type, token } from "@prisma/client";
+import type { network_type, token } from "../db/types";
 
 export const TOKENS = {
   Base: {

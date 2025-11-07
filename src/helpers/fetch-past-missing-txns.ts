@@ -3,9 +3,9 @@
 import { parseAbiItem } from "viem";
 import { pbClient } from "../utils/config";
 import { getScheduleInfo, updateSchedule } from "../core/transaction";
-import prisma from "../lib/prisma";
-import type { network_type } from "@prisma/client";
+import type { network_type } from "../db/types";
 import { getTxDate } from "./fix-transaction-dates";
+import db from "../db";
 
 export default async function fetchPastMissingTxns(network: network_type) {
   const logs = await pbClient.getLogs({
@@ -18,10 +18,12 @@ export default async function fetchPastMissingTxns(network: network_type) {
 
   for (const log of logs) {
     const { args, address, transactionHash } = log;
-    const existingTx = await prisma.transaction.findUnique({
-      where: { tx_id: transactionHash },
-      select: { tx_id: true },
-    });
+
+    const existingTx = await db
+      .selectFrom("transaction")
+      .select("tx_id")
+      .where("tx_id", "=", transactionHash)
+      .executeTakeFirst();
     if (existingTx) continue;
 
     const { username, scheduleId } = args;
@@ -45,8 +47,8 @@ export default async function fetchPastMissingTxns(network: network_type) {
 
     const payout = Number(info.payout);
 
-    await prisma.$transaction(async (tx) => {
-      await tx.transaction.create({ data: txn });
+    await db.transaction().execute(async (tx) => {
+      await tx.insertInto("transaction").values(txn).execute();
 
       await updateSchedule(
         pbClient,
@@ -59,10 +61,11 @@ export default async function fetchPastMissingTxns(network: network_type) {
         tx
       );
 
-      await tx.user.update({
-        where: { username },
-        data: { total_payout: { increment: payout } },
-      });
+      await tx
+        .updateTable("user")
+        .set((eb) => ({ total_payout: eb("total_payout", "+", payout.toString()) }))
+        .where("username", "=", username)
+        .execute();
     });
   }
 }

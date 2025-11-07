@@ -1,6 +1,6 @@
 import { type Address, privateKeyToAccount } from "viem/accounts";
 import { pbClient, getChain, getEnvVariable } from "../utils/config";
-import type { network_type } from "@prisma/client";
+import type { network_type } from "../db/types";
 
 export const PaymentKey = getEnvVariable("PAYMENT_KEY") as Address;
 

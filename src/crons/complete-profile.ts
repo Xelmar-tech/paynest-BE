@@ -1,13 +1,21 @@
+import db from "../db";
 import { completeProfileMail } from "../email";
-import prisma from "../lib/prisma";
 
 export default async function completeProfile() {
-  const users = await prisma.user.findMany({
-    where: {
-      OR: [{ username: null }, { username: "" }, { wallets: { none: {} } }],
-    },
-    select: { email: true, name: true, username: true, wallets: { select: { id: true } } },
-  });
+  const users = await db
+    .selectFrom("user")
+    .leftJoin("wallet", "wallet.username", "user.username")
+    .select(["user.email", "user.name", "user.username", "wallet.id as wallet_id"])
+    .where((eb) =>
+      eb.or([
+        eb("user.username", "is", null),
+        eb("user.username", "=", ""),
+        eb.not(
+          eb.exists(eb.selectFrom("wallet").select("wallet.id").whereRef("wallet.username", "=", "user.username"))
+        ),
+      ])
+    )
+    .execute();
 
   for (const user of users) {
     if (!user.email) continue;
@@ -15,7 +23,7 @@ export default async function completeProfile() {
       email: user.email,
       recipient: user.name || user.username || undefined,
       noUsername: !user.username,
-      noWallet: user.wallets.length === 0,
+      noWallet: user.wallet_id === null,
     });
   }
 }

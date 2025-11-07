@@ -4,43 +4,60 @@ import { getConsts } from "../constants";
 import { getBalance } from "../utils/onchain-utils";
 import { getAddressByToken } from "../utils/token";
 import { informPaymentDelay, warnFailedPayment } from "../email";
-import prisma from "../lib/prisma";
-import type { organization } from "@prisma/client";
+import type { organization } from "../db/types";
+import db from "../db";
 
 async function loadUpcomingSchedules(now: number) {
-  const schedules = await prisma.schedule.findMany({
-    where: {
-      nextPayout: {
-        lte: now + 600,
-      },
-      active: true,
-    },
-    orderBy: { nextPayout: "asc" },
-    select: { id: true, nextPayout: true },
-  });
+  const schedules = await db
+    .selectFrom("schedule")
+    .select(["id", "nextPayout"])
+    .where("nextPayout", "<=", (now + 600).toString()) // because Decimal → string
+    .where("active", "=", true)
+    .orderBy("nextPayout", "asc")
+    .execute();
 
   return schedules;
 }
 
-async function executeSchedulePayment(id: `0x${string}`) {
-  const { username, asset, network, amount, org } = await prisma.schedule.findUniqueOrThrow({
-    where: { id },
-    select: {
-      username: true,
-      asset: true,
-      amount: true,
-      network: true,
-      org: {
-        select: {
-          name: true,
-          owner: true,
-          wallet: true,
-          plugin: true,
-          id: true,
-        },
-      },
+async function getScheduleAndOrgByScheduleId(id: `0x${string}`) {
+  const row = await db
+    .selectFrom("schedule")
+    .innerJoin("organization", "organization.id", "schedule.org_id")
+    .select([
+      "schedule.username",
+      "schedule.asset",
+      "schedule.amount",
+      "schedule.network",
+
+      // organization fields
+      "organization.name as org_name",
+      "organization.owner as org_owner",
+      "organization.wallet as org_wallet",
+      "organization.plugin as org_plugin",
+      "organization.id as org_id",
+    ])
+    .where("schedule.id", "=", id)
+    .executeTakeFirst();
+
+  if (!row) throw new Error("Schedule not found");
+
+  return {
+    username: row.username,
+    asset: row.asset,
+    amount: row.amount,
+    network: row.network,
+    org: {
+      name: row.org_name,
+      owner: row.org_owner,
+      wallet: row.org_wallet,
+      plugin: row.org_plugin,
+      id: row.org_id,
     },
-  });
+  };
+}
+
+async function executeSchedulePayment(id: `0x${string}`) {
+  const { username, asset, network, amount, org } = await getScheduleAndOrgByScheduleId(id);
 
   const { CONSTS, pubClient } = await getConsts(network);
 
@@ -67,14 +84,8 @@ async function executeSchedulePayment(id: `0x${string}`) {
 
 async function handleLowBalance(org: Pick<organization, "owner" | "name" | "id">, username: string) {
   const [owner, user] = await Promise.all([
-    prisma.user.findUniqueOrThrow({
-      where: { username: org.owner },
-      select: { email: true },
-    }),
-    prisma.user.findUniqueOrThrow({
-      where: { username },
-      select: { email: true, name: true },
-    }),
+    db.selectFrom("user").select("email").where("username", "=", org.owner).executeTakeFirstOrThrow(),
+    db.selectFrom("user").select(["email", "name"]).where("username", "=", username).executeTakeFirstOrThrow(),
   ]);
 
   if (!owner?.email || !user?.email) {
@@ -99,7 +110,7 @@ async function handleSimulationError(error: unknown, id: string, username: strin
   if (error instanceof ContractFunctionExecutionError) {
     const cause: string = (error.cause as any).data.errorName;
     if (cause === "ScheduleNotActive") {
-      await prisma.schedule.update({ where: { id }, data: { active: false } });
+      await db.updateTable("schedule").set({ active: false }).where("id", "=", id).execute();
     } else {
       console.error(`${error.cause.shortMessage}\n${error.cause.metaMessages?.[0]}`);
     }

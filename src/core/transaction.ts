@@ -5,18 +5,19 @@ import { pbClient } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
 import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
-import prisma from "../lib/prisma";
-import { Prisma, PrismaClient, stream_state } from "@prisma/client";
+import type { DB } from "../db/types";
+import { stream_state } from "../db/enums";
 import { getTxDate } from "../helpers/fix-transaction-dates";
-import { DefaultArgs } from "@prisma/client/runtime/library";
+import type { Transaction } from "kysely";
+import db from "../db";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
 // const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
 
-type PrismaTxType = Omit<
-  PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
-  "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
->;
+// type PrismaTxType = Omit<
+//   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+//   "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
+// >;
 
 export default async function addTransaction({ args, address, transactionHash, eventName }: TransactionLog) {
   const { username } = args;
@@ -55,8 +56,8 @@ export default async function addTransaction({ args, address, transactionHash, e
         ? (args as ScheduleExecutedArgs).scheduleId
         : (args as StreamExecutedArgs).streamId;
 
-    await prisma.$transaction(async (tx) => {
-      await tx.transaction.create({ data: txn });
+    await db.transaction().execute(async (tx) => {
+      await tx.insertInto("transaction").values(txn).execute();
 
       await updatePayment(
         pbClient,
@@ -69,10 +70,11 @@ export default async function addTransaction({ args, address, transactionHash, e
         tx
       );
 
-      await tx.user.update({
-        where: { username },
-        data: { total_payout: { increment: Number(_payout) } },
-      });
+      await tx
+        .updateTable("user")
+        .set((eb) => ({ total_payout: eb("total_payout", "+", _payout) }))
+        .where("username", "=", username)
+        .execute();
     });
     return true;
   } catch (error) {
@@ -84,10 +86,7 @@ export default async function addTransaction({ args, address, transactionHash, e
 async function getScheduleInfo(client: typeof pbClient, args: ScheduleExecutedArgs) {
   try {
     const [{ org_id, asset }, decimals] = await Promise.all([
-      prisma.schedule.findUniqueOrThrow({
-        where: { id: args.scheduleId },
-        select: { org_id: true, asset: true },
-      }),
+      db.selectFrom("schedule").select(["asset", "org_id"]).where("id", "=", args.scheduleId).executeTakeFirstOrThrow(),
       getDecimals(client, args.token),
     ]);
 
@@ -105,10 +104,7 @@ async function getStreamInfo(client: typeof pbClient, hash: Address, id: Address
       client.getTransactionReceipt({
         hash,
       }),
-      prisma.stream.findUniqueOrThrow({
-        where: { id },
-        select: { org_id: true, asset: true, network: true },
-      }),
+      db.selectFrom("stream").select(["org_id", "asset", "network"]).where("id", "=", id).executeTakeFirstOrThrow(),
     ]);
 
     const token = getAddressByToken(network, asset);
@@ -138,7 +134,7 @@ async function updateSchedule(
   client: typeof pbClient,
   pluginAddr: Address,
   data: { username: string; payout: number; id: Address },
-  tx: PrismaTxType
+  tx: Transaction<DB>
 ) {
   const plugin = getContract({
     address: pluginAddr,
@@ -149,22 +145,19 @@ async function updateSchedule(
   const schedule = await plugin.read.getSchedule([data.username, data.id]);
 
   const updateFields = {
-    nextPayout: schedule.nextPayout,
+    nextPayout: schedule.nextPayout.toString(),
     active: schedule.active,
-    payout: data.payout,
+    payout: data.payout.toString(),
   };
 
-  await tx.schedule.update({
-    where: { id: data.id },
-    data: updateFields,
-  });
+  await tx.updateTable("schedule").set(updateFields).where("id", "=", data.id).execute();
 }
 
 async function updateStream(
   client: typeof pbClient,
   pluginAddr: Address,
   data: { username: string; payout: number; id: Address },
-  tx: PrismaTxType
+  tx: Transaction<DB>
 ) {
   const plugin = getContract({
     address: pluginAddr,
@@ -176,9 +169,9 @@ async function updateStream(
   const activeState = stream.state === StreamState.Active;
 
   const updateFields = {
-    lastPayout: Math.floor(new Date().getTime() / 1000),
+    lastPayout: Math.floor(new Date().getTime() / 1000).toString(),
     active: activeState,
-    payout: data.payout,
+    payout: data.payout.toString(),
     state: activeState
       ? stream_state.active
       : stream.state === StreamState.Paused
@@ -186,10 +179,7 @@ async function updateStream(
       : stream_state.cancelled,
   };
 
-  await tx.stream.update({
-    where: { id: data.id },
-    data: updateFields,
-  });
+  await tx.updateTable("stream").set(updateFields).where("id", "=", data.id).execute();
 }
 
 export { updateSchedule, updateStream, getScheduleInfo, getStreamInfo };

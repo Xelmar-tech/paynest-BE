@@ -1,34 +1,43 @@
 /// <reference path="./types/emails.d.ts" />
 
+import { createHash } from "crypto";
 import redis from "./lib/redis";
 import { getEnvVariable } from "./utils/config";
 
 const endpoint = "https://app.paynest.xyz/api/email";
 const key = getEnvVariable("EMAIL_API_KEY");
 
+const HOUR = 60 * 60;
+const WEEK = HOUR * 24 * 7;
 const limits: Record<EmailKeys, { base: number; max: number }> = {
-  "low-balance": { base: 60 * 60 * 24, max: 3 },
-  "failed-payment": { base: 60 * 60 * 6, max: 3 },
-  "payment-delay": { base: 60 * 60 * 24 * 7, max: 1 },
-  "complete-profile": { base: 60 * 60 * 24 * 7, max: 2 },
+  "low-balance": { base: HOUR * 24, max: 3 },
+  "failed-payment": { base: HOUR * 6, max: 3 },
+  "payment-delay": { base: WEEK, max: 1 },
+  "complete-profile": { base: WEEK, max: 2 },
 };
 
-async function spamCheck(spamKey: EmailKeys, orgId: string, email: string) {
-  const key = `spam-check:${spamKey}:${orgId}:${email}`;
-  if (await redis.sismember("spam-blacklist", key)) return false;
-
-  const spamCount = await redis.get<number>(key);
+const hashEmail = (email: string) => createHash("sha1").update(email).digest("hex").slice(0, 12);
+export async function spamCheck(spamKey: EmailKeys, orgId: string, email: string) {
+  const key = `spam:${orgId}:${hashEmail(email)}`;
   const { max, base } = limits[spamKey];
 
-  const count = spamCount ?? 0;
-  if (count >= max) {
-    await redis.sadd("spam-blacklist", key);
-    return false;
-  }
+  const current = (await redis.hget<number>(key, spamKey)) ?? 0;
+  if (current >= max) return false;
 
-  const expiry = base * (count + 1);
-  await redis.set(key, count + 1, { ex: expiry });
+  const [ttl] = await redis.httl(key, spamKey);
+  if (ttl > HOUR) return false;
 
+  const next = current + 1;
+  const jitter = Math.floor(Math.random() * 60);
+  const expiry = base * next + jitter;
+
+  let hset = await Promise.all([
+    redis.hset(key, { [spamKey]: next }),
+    redis.hexpire(key, spamKey, expiry),
+    redis.expire(key, WEEK),
+  ]);
+
+  console.log(hset);
   return true;
 }
 

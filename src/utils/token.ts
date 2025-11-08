@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { network_type, token } from "../db/types";
+import type { NetworkType, Token } from "../db/types";
 
 export const TOKENS = {
   Base: {
@@ -15,14 +15,14 @@ export const TOKENS = {
   },
 };
 
-export function getTokenByAddress(network: network_type, address: Address) {
+export function getTokenByAddress(network: NetworkType, address: Address) {
   const networkTokens = TOKENS[network];
   return (Object.keys(networkTokens) as (keyof typeof networkTokens)[]).find(
     (token) => networkTokens[token].toLowerCase() == address.toLowerCase()
   );
 }
 
-export function getAddressByToken(network: network_type, asset: token) {
+export function getAddressByToken(network: NetworkType, asset: Token) {
   if (network !== "Base" || asset !== "USDC") return undefined;
   const networkTokens = TOKENS[network];
   return networkTokens[asset as keyof typeof networkTokens] as Address;

@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { createPublicClient, fallback, http, webSocket } from "viem";
 import { base } from "viem/chains";
-import type { network_type } from "../db/types";
+import type { NetworkType } from "../db/types";
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ const INFURA = getEnvVariable("INFURA");
 const QUICKNODE = getEnvVariable("QUICKNODE");
 const ALCHEMY = getEnvVariable("ALCHEMY");
 
-export function getChain(_network: network_type) {
+export function getChain(_network: NetworkType) {
   return base;
 }
 

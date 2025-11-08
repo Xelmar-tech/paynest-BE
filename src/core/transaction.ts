@@ -5,7 +5,7 @@ import { pbClient } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
 import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
-import type { DB } from "../db/types";
+import type { DB } from "../db/db";
 import { stream_state } from "../db/enums";
 import { getTxDate } from "../helpers/fix-transaction-dates";
 import type { Transaction } from "kysely";

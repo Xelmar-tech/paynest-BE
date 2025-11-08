@@ -6,6 +6,7 @@ import { getTokenByAddress } from "../utils/token";
 import { incomingPaymentSchedule } from "../email";
 import { paymentsPluginAbi } from "../constants/abi";
 import db from "../db";
+import { NetworkType } from "../db/types";
 
 export default async function fetchCreatedSchedules() {
   const logs = await pbClient.getLogs({
@@ -23,7 +24,7 @@ export default async function fetchCreatedSchedules() {
       getDecimals(pbClient, args.token),
     ]);
 
-    const token = getTokenByAddress("Base", args.token);
+    const token = getTokenByAddress(NetworkType.BASE, args.token);
     if (!org || !token || !user?.email) continue;
 
     const paymentDate = new Date(firstPaymentDate);

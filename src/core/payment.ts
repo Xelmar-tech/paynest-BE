@@ -4,8 +4,9 @@ import { getConsts } from "../constants";
 import { getBalance } from "../utils/onchain-utils";
 import { getAddressByToken } from "../utils/token";
 import { informPaymentDelay, warnFailedPayment } from "../email";
-import type { organization } from "../db/types";
+import type { Organization } from "../db/types";
 import db from "../db";
+import { pbClient } from "../utils/config";
 
 async function loadUpcomingSchedules(now: number) {
   const schedules = await db
@@ -58,19 +59,18 @@ async function getScheduleAndOrgByScheduleId(id: `0x${string}`) {
 
 async function executeSchedulePayment(id: `0x${string}`) {
   const { username, asset, network, amount, org } = await getScheduleAndOrgByScheduleId(id);
-
-  const { CONSTS, pubClient } = await getConsts(network);
+  const CONSTS = await getConsts(network);
 
   const token = getAddressByToken(network, asset);
   if (!token) return;
 
-  const balance = await getBalance(pubClient, token, org.wallet as `0x${string}`);
+  const balance = await getBalance(pbClient, token, org.wallet as `0x${string}`);
   if (balance < Number(amount)) return await handleLowBalance(org, username);
 
   const plugin = getContract({
     address: org.plugin as `0x${string}`,
     abi: paymentsPluginAbi,
-    client: pubClient,
+    client: pbClient,
   });
 
   try {
@@ -82,7 +82,7 @@ async function executeSchedulePayment(id: `0x${string}`) {
   await plugin.write.executeSchedule([username, id], CONSTS);
 }
 
-async function handleLowBalance(org: Pick<organization, "owner" | "name" | "id">, username: string) {
+async function handleLowBalance(org: Pick<Organization, "owner" | "name" | "id">, username: string) {
   const [owner, user] = await Promise.all([
     db.selectFrom("user").select("email").where("username", "=", org.owner).executeTakeFirstOrThrow(),
     db.selectFrom("user").select(["email", "name"]).where("username", "=", username).executeTakeFirstOrThrow(),
@@ -124,6 +124,7 @@ export default async function scheduleUpcomingPayouts() {
   const nowMs = Date.now();
   const now = Math.floor(nowMs / 1000);
   const schedules = await loadUpcomingSchedules(now);
+  console.log(schedules, "Payments Schedules");
 
   for (const s of schedules) {
     const runAt = Number(s.nextPayout) * 1000;

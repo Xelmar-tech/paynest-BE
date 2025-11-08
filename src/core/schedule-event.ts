@@ -7,6 +7,7 @@ import { formatEmailDate } from "../utils/date";
 import { getTokenByAddress } from "../utils/token";
 import { incomingPaymentSchedule } from "../email";
 import db from "../db";
+import { NetworkType } from "../db/types";
 
 async function scheduleCreatedEvent({ args, address }: ScheduleCreatedLog) {
   const { username, firstPaymentDate } = args;
@@ -18,7 +19,7 @@ async function scheduleCreatedEvent({ args, address }: ScheduleCreatedLog) {
       getDecimals(pbClient, args.token),
     ]);
 
-    const token = getTokenByAddress("Base", args.token);
+    const token = getTokenByAddress(NetworkType.BASE, args.token);
     if (!org || !token || !user?.email) return false;
 
     const paymentDate = new Date(firstPaymentDate);

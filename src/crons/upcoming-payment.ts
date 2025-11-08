@@ -1,4 +1,3 @@
-import { getConsts } from "../constants";
 import { getBalance } from "../utils/onchain-utils";
 import { getAddressByToken } from "../utils/token";
 import { warnLowBalance } from "../email";
@@ -22,8 +21,8 @@ async function getSchedules() {
       "organization.wallet as org_wallet",
     ])
     .where("schedule.active", "=", true)
-    .where("schedule.nextPayout", ">=", now.toString())
-    .where("schedule.nextPayout", "<=", (now + 3600).toString())
+    .where("nextPayout", ">=", now.toString())
+    .where("nextPayout", "<=", (now + 3600).toString())
     .execute();
 
   const schedules = rows.map((r) => ({
@@ -45,6 +44,7 @@ async function getSchedules() {
 export default async function upcomingPayments() {
   const schedules = await getSchedules();
   if (schedules.length === 0) return;
+  console.log(schedules, "Upcoming Schedules");
 
   for (const { amount, asset, network, org } of schedules) {
     const owner = await db
@@ -62,7 +62,8 @@ export default async function upcomingPayments() {
         console.error(`Cannot notify ${org.name} owner with username ${org.owner}, email is null`);
       } else {
         const params = { orgName: org.name, orgId: org.id, email: owner.email };
-        await warnLowBalance(params);
+        // await warnLowBalance(params);
+        console.log(params, "Params");
       }
     }
   }

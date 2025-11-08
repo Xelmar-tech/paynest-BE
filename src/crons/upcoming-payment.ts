@@ -62,8 +62,7 @@ export default async function upcomingPayments() {
         console.error(`Cannot notify ${org.name} owner with username ${org.owner}, email is null`);
       } else {
         const params = { orgName: org.name, orgId: org.id, email: owner.email };
-        // await warnLowBalance(params);
-        console.log(params, "Params");
+        await warnLowBalance(params);
       }
     }
   }

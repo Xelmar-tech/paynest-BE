@@ -5,19 +5,13 @@ import { pbClient } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
 import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
-import type { DB } from "../db/db";
-import { stream_state } from "../db/enums";
+import type { DB } from "../db/types";
+import { NetworkType, StreamState as stream_state } from "../db/types";
 import { getTxDate } from "../helpers/fix-transaction-dates";
 import type { Transaction } from "kysely";
 import db from "../db";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
-// const transferTopic = keccak256(toBytes("Transfer(address,address,uint256)"));
-
-// type PrismaTxType = Omit<
-//   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
-//   "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
-// >;
 
 export default async function addTransaction({ args, address, transactionHash, eventName }: TransactionLog) {
   const { username } = args;
@@ -32,7 +26,7 @@ export default async function addTransaction({ args, address, transactionHash, e
     const date = await getTxDate(transactionHash, pbClient);
     const txn = {
       tx_id: transactionHash,
-      network: "Base",
+      network: NetworkType.BASE,
       amount: info.payout,
       asset: info.asset,
       recipient: info.recipient,
@@ -173,10 +167,10 @@ async function updateStream(
     active: activeState,
     payout: data.payout.toString(),
     state: activeState
-      ? stream_state.active
+      ? stream_state.ACTIVE
       : stream.state === StreamState.Paused
-      ? stream_state.paused
-      : stream_state.cancelled,
+      ? stream_state.PAUSED
+      : stream_state.CANCELLED,
   };
 
   await tx.updateTable("stream").set(updateFields).where("id", "=", data.id).execute();

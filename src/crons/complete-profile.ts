@@ -16,14 +16,15 @@ export default async function completeProfile() {
       ])
     )
     .execute();
+  console.log(users, "Complete Profile");
 
-  for (const user of users) {
-    if (!user.email) continue;
-    await completeProfileMail({
-      email: user.email,
-      recipient: user.name || user.username || undefined,
-      noUsername: !user.username,
-      noWallet: user.wallet_id === null,
-    });
-  }
+  // for (const user of users) {
+  //   if (!user.email) continue;
+  //   await completeProfileMail({
+  //     email: user.email,
+  //     recipient: user.name || user.username || undefined,
+  //     noUsername: !user.username,
+  //     noWallet: user.wallet_id === null,
+  //   });
+  // }
 }

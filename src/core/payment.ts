@@ -124,7 +124,6 @@ export default async function scheduleUpcomingPayouts() {
   const nowMs = Date.now();
   const now = Math.floor(nowMs / 1000);
   const schedules = await loadUpcomingSchedules(now);
-  console.log(schedules, "Payments Schedules");
 
   for (const s of schedules) {
     const runAt = Number(s.nextPayout) * 1000;

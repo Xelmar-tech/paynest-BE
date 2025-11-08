@@ -9,7 +9,10 @@
     "test": "ts-node src/test.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": {
+    "name": "Steven Tomi",
+    "url": "https://github.com/steffqing"
+  },
   "license": "ISC",
   "description": "",
   "dependencies": {

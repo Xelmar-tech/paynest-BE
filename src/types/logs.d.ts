@@ -6,36 +6,27 @@ interface ScheduleExecutedArgs {
   periods: bigint;
   recipient: Address;
 }
+
 interface StreamExecutedArgs {
   username: string;
   streamId: Address;
   token: Address;
   recipient: Address;
+  amount: bigint;
 }
-interface StreamMigratedArgs {
+
+interface InvoicePaid {
   username: string;
-  streamId: Address;
-  oldRecipient: Address;
-  newRecipient: Address;
-}
-interface StreamStateChangedArgs {
-  username: string;
-  streamId: Address;
-  oldState: unknown;
-  newState: unknown;
-}
-interface FlowRateUpdatedArgs {
-  username: string;
-  streamId: Address;
-  oldAmountPerSec: bigint;
-  newAmountPerSec: bigint;
+  invoiceId: Address;
+  token: Address;
+  amount: bigint;
 }
 
 interface TransactionLog {
-  eventName: "ScheduleExecuted" | "StreamStateChanged" | "FlowRateUpdated" | "StreamExecuted" | "StreamMigrated";
+  eventName: "ScheduleExecuted" | "StreamExecuted";
   transactionHash: Address;
   address: Address;
-  args: ScheduleExecutedArgs | StreamExecutedArgs | StreamMigratedArgs | StreamStateChangedArgs | FlowRateUpdatedArgs;
+  args: ScheduleExecutedArgs | StreamExecutedArgs;
 }
 
 interface ScheduleCreatedArgs {

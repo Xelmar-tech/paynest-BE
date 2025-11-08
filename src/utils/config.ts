@@ -14,6 +14,7 @@ export function getEnvVariable(variableName: string) {
 }
 
 const INFURA = getEnvVariable("INFURA");
+const INFURA_HTTP = getEnvVariable("INFURA_HTTP");
 const QUICKNODE = getEnvVariable("QUICKNODE");
 const ALCHEMY = getEnvVariable("ALCHEMY");
 
@@ -23,7 +24,7 @@ export function getChain(_network: NetworkType) {
 
 export const pbClient = createPublicClient({
   chain: base,
-  transport: fallback([http(QUICKNODE), http(ALCHEMY)]),
+  transport: fallback([http(QUICKNODE), http(ALCHEMY), http(INFURA_HTTP)]),
 });
 
 export const wsClient = createPublicClient({

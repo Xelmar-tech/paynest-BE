@@ -1,6 +1,5 @@
-import completeProfile from "./crons/complete-profile";
-import failedEvents from "./crons/failed-events";
+import fetchPastMissingTxns from "./helpers/fetch-past-missing-txns";
 
 (async () => {
-  await failedEvents();
+  fetchPastMissingTxns();
 })();

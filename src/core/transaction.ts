@@ -10,20 +10,25 @@ import { NetworkType, StreamState as stream_state } from "../db/types";
 import { getTxDate } from "../helpers/fix-transaction-dates";
 import type { Transaction } from "kysely";
 import db from "../db";
+import { withRetry } from "../utils";
 
 const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
 
 export default async function addTransaction({ args, address, transactionHash, eventName }: TransactionLog) {
   const { username } = args;
-
   try {
+    const existingTx = await withRetry(() =>
+      db.selectFrom("transaction").select("tx_id").where("tx_id", "=", transactionHash).executeTakeFirst()
+    );
+    if (existingTx) return true;
+
     const info = !("streamId" in args)
-      ? await getScheduleInfo(pbClient, args)
-      : await getStreamInfo(pbClient, transactionHash, args.streamId);
+      ? await getScheduleInfo(args)
+      : await getStreamInfo(transactionHash, args.streamId);
 
     if (!info) return false;
 
-    const date = await getTxDate(transactionHash, pbClient);
+    const date = await getTxDate(transactionHash);
     const txn = {
       tx_id: transactionHash,
       network: NetworkType.BASE,
@@ -38,7 +43,7 @@ export default async function addTransaction({ args, address, transactionHash, e
     } as const;
 
     const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
-    // if stream state changed to active, payout should be 0 because it was cancelled and is restarting
+
     const _payout =
       eventName === "StreamStateChanged"
         ? (args as StreamStateChangedArgs).newState === StreamState.Active
@@ -49,6 +54,8 @@ export default async function addTransaction({ args, address, transactionHash, e
       eventName === "ScheduleExecuted"
         ? (args as ScheduleExecutedArgs).scheduleId
         : (args as StreamExecutedArgs).streamId;
+
+    console.log(_payout, txn, date, info);
 
     await db.transaction().execute(async (tx) => {
       await tx.insertInto("transaction").values(txn).execute();
@@ -77,11 +84,11 @@ export default async function addTransaction({ args, address, transactionHash, e
   }
 }
 
-async function getScheduleInfo(client: typeof pbClient, args: ScheduleExecutedArgs) {
+async function getScheduleInfo(args: ScheduleExecutedArgs) {
   try {
     const [{ org_id, asset }, decimals] = await Promise.all([
       db.selectFrom("schedule").select(["asset", "org_id"]).where("id", "=", args.scheduleId).executeTakeFirstOrThrow(),
-      getDecimals(client, args.token),
+      getDecimals(args.token),
     ]);
 
     const payout = formatUnits(args.amount, decimals);
@@ -92,10 +99,10 @@ async function getScheduleInfo(client: typeof pbClient, args: ScheduleExecutedAr
   }
 }
 
-async function getStreamInfo(client: typeof pbClient, hash: Address, id: Address) {
+async function getStreamInfo(hash: Address, id: Address) {
   try {
     const [{ logs }, { org_id, asset, network }] = await Promise.all([
-      client.getTransactionReceipt({
+      pbClient.getTransactionReceipt({
         hash,
       }),
       db.selectFrom("stream").select(["org_id", "asset", "network"]).where("id", "=", id).executeTakeFirstOrThrow(),
@@ -104,7 +111,7 @@ async function getStreamInfo(client: typeof pbClient, hash: Address, id: Address
     const token = getAddressByToken(network, asset);
     if (!token) return;
 
-    const decimals = await getDecimals(client, token);
+    const decimals = await getDecimals(token);
 
     const [withdraw] = logs
       .filter((log) => log.topics[0] === withdrawTopic)

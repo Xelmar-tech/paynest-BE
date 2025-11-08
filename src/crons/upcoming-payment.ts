@@ -2,7 +2,7 @@ import { getBalance } from "../utils/onchain-utils";
 import { getAddressByToken } from "../utils/token";
 import { warnLowBalance } from "../email";
 import db from "../db";
-import { pbClient } from "../utils/config";
+import { withRetry } from "../utils";
 
 async function getSchedules() {
   const now = Math.floor(Date.now() / 1000);
@@ -42,9 +42,8 @@ async function getSchedules() {
 }
 
 export default async function upcomingPayments() {
-  const schedules = await getSchedules();
+  const schedules = await withRetry(() => getSchedules());
   if (schedules.length === 0) return;
-  console.log(schedules, "Upcoming Schedules");
 
   for (const { amount, asset, network, org } of schedules) {
     const owner = await db
@@ -56,7 +55,7 @@ export default async function upcomingPayments() {
     const token = getAddressByToken(network, asset);
     if (!token) continue;
 
-    const balance = await getBalance(pbClient, token, org.wallet as `0x${string}`);
+    const balance = await getBalance(token, org.wallet as `0x${string}`);
     if (balance < Number(amount)) {
       if (owner.email === null) {
         console.error(`Cannot notify ${org.name} owner with username ${org.owner}, email is null`);

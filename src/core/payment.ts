@@ -7,6 +7,7 @@ import { informPaymentDelay, warnFailedPayment } from "../email";
 import type { Organization } from "../db/types";
 import db from "../db";
 import { pbClient } from "../utils/config";
+import { withRetry } from "../utils";
 
 async function loadUpcomingSchedules(now: number) {
   const schedules = await db
@@ -64,7 +65,7 @@ async function executeSchedulePayment(id: `0x${string}`) {
   const token = getAddressByToken(network, asset);
   if (!token) return;
 
-  const balance = await getBalance(pbClient, token, org.wallet as `0x${string}`);
+  const balance = await getBalance(token, org.wallet as `0x${string}`);
   if (balance < Number(amount)) return await handleLowBalance(org, username);
 
   const plugin = getContract({
@@ -123,7 +124,7 @@ async function handleSimulationError(error: unknown, id: string, username: strin
 export default async function scheduleUpcomingPayouts() {
   const nowMs = Date.now();
   const now = Math.floor(nowMs / 1000);
-  const schedules = await loadUpcomingSchedules(now);
+  const schedules = await withRetry(() => loadUpcomingSchedules(now));
 
   for (const s of schedules) {
     const runAt = Number(s.nextPayout) * 1000;

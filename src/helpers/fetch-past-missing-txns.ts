@@ -1,71 +1,28 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { parseAbiItem } from "viem";
+import { type Address, parseAbiItem } from "viem";
 import { pbClient } from "../utils/config";
-import { getScheduleInfo, updateSchedule } from "../core/transaction";
-import { NetworkType } from "../db/types";
-import { getTxDate } from "./fix-transaction-dates";
+import addTransaction from "../core/transaction";
 import db from "../db";
+import { getTxBlock } from "./fix-transaction-dates";
+import { withRetry } from "../utils";
 
 export default async function fetchPastMissingTxns() {
+  const { tx_id } = await withRetry(() =>
+    db.selectFrom("transaction").select("tx_id").orderBy("created_at", "desc").limit(1).executeTakeFirstOrThrow()
+  );
+  const blockNumber = await getTxBlock(tx_id as Address);
+
   const logs = await pbClient.getLogs({
     event: parseAbiItem(
       "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)"
     ),
     strict: true,
-    fromBlock: BigInt(36444428),
+    fromBlock: blockNumber + BigInt(1),
   });
 
   for (const log of logs) {
-    const { args, address, transactionHash } = log;
-
-    const existingTx = await db
-      .selectFrom("transaction")
-      .select("tx_id")
-      .where("tx_id", "=", transactionHash)
-      .executeTakeFirst();
-    if (existingTx) continue;
-
-    const { username, scheduleId } = args;
-    const info = await getScheduleInfo(pbClient, args);
-
-    if (!info) continue;
-
-    const date = await getTxDate(transactionHash, pbClient);
-    const txn = {
-      tx_id: transactionHash,
-      network: NetworkType.BASE,
-      amount: info.payout,
-      asset: info.asset,
-      recipient: info.recipient,
-      org_id: info.orgId,
-      username,
-      schedule_id: scheduleId,
-      stream_id: null,
-      created_at: date,
-    } as const;
-
-    const payout = Number(info.payout);
-
-    await db.transaction().execute(async (tx) => {
-      await tx.insertInto("transaction").values(txn).execute();
-
-      await updateSchedule(
-        pbClient,
-        address,
-        {
-          username,
-          payout,
-          id: scheduleId,
-        },
-        tx
-      );
-
-      await tx
-        .updateTable("user")
-        .set((eb) => ({ total_payout: eb("total_payout", "+", payout.toString()) }))
-        .where("username", "=", username)
-        .execute();
-    });
+    const { args, address, transactionHash, eventName } = log;
+    await addTransaction({ args, address, transactionHash, eventName });
   }
 }

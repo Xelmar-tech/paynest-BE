@@ -1,9 +1,7 @@
 import { type Address, erc20Abi, formatUnits } from "viem";
-import { pbClient } from "./config";
+import { pbClient as client } from "./config";
 
-type PublicClient = typeof pbClient;
-
-export async function getDecimals(client: PublicClient, token: Address) {
+export async function getDecimals(token: Address) {
   const decimals = await client.readContract({
     address: token,
     abi: erc20Abi,
@@ -12,7 +10,7 @@ export async function getDecimals(client: PublicClient, token: Address) {
   return decimals;
 }
 
-async function getRawBalance(client: PublicClient, token: Address, contract: Address) {
+async function getRawBalance(token: Address, contract: Address) {
   const balanceOf = await client.readContract({
     abi: erc20Abi,
     address: token,
@@ -21,8 +19,8 @@ async function getRawBalance(client: PublicClient, token: Address, contract: Add
   });
   return balanceOf;
 }
-export async function getBalance(client: PublicClient, token: Address, contract: Address) {
-  const [balanceOf, decimals] = await Promise.all([getRawBalance(client, token, contract), getDecimals(client, token)]);
+export async function getBalance(token: Address, contract: Address) {
+  const [balanceOf, decimals] = await Promise.all([getRawBalance(token, contract), getDecimals(token)]);
   const balance = formatUnits(balanceOf, decimals);
   return Number(balance);
 }

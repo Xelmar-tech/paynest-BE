@@ -37,7 +37,6 @@ export async function spamCheck(spamKey: EmailKeys, orgId: string, email: string
     redis.expire(key, WEEK),
   ]);
 
-  console.log(hset);
   return true;
 }
 

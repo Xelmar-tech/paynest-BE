@@ -1,5 +1,5 @@
-import fetchPastMissingTxns from "./helpers/fetch-past-missing-txns";
+import { startHealthServer } from "./watchers/watchdog";
 
 (async () => {
-  fetchPastMissingTxns();
+  startHealthServer();
 })();

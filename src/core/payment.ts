@@ -77,6 +77,7 @@ async function executeSchedulePayment(id: `0x${string}`) {
   try {
     await plugin.simulate.executeSchedule([username, id]);
   } catch (error) {
+    console.log(error, "simulate error");
     return await handleSimulationError(error, id, username, org.name); // skip this user as simulation fails
   }
 

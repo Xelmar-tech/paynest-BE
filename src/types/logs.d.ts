@@ -37,7 +37,6 @@ interface ScheduleCreatedArgs {
   amount: bigint;
   interval: number;
   isOneTime: boolean;
-  recipient: Address;
 }
 
 interface ScheduleCreatedLog {

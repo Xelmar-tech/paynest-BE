@@ -1,7 +1,6 @@
 /// <reference path="../types/logs.d.ts" />
 
 import { checksumAddress, formatUnits } from "viem";
-import { pbClient } from "../utils/config";
 import { getDecimals } from "../utils/onchain-utils";
 import { formatEmailDate, withRetry } from "../utils";
 import { getTokenByAddress } from "../utils/token";

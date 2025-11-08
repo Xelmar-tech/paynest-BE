@@ -6,7 +6,7 @@ import { replacer } from "../utils";
 
 export default function watch_events() {
   wsClient.watchEvent({
-    event: paymentsPluginAbi[44],
+    event: paymentsPluginAbi[48],
     strict: true,
     fromBlock: BigInt(36456334),
     onLogs: async (logs) => {

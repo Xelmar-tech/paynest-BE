@@ -6,6 +6,7 @@ import addTransaction from "../core/transaction";
 import db from "../db";
 import { getTxBlock } from "./fix-transaction-dates";
 import { withRetry } from "../utils";
+import { paymentsPluginAbi } from "../constants/abi";
 
 export default async function fetchPastMissingTxns() {
   const { tx_id } = await withRetry(() =>
@@ -14,9 +15,7 @@ export default async function fetchPastMissingTxns() {
   const blockNumber = await getTxBlock(tx_id as Address);
 
   const logs = await pbClient.getLogs({
-    event: parseAbiItem(
-      "event ScheduleExecuted(string username, bytes32 indexed scheduleId, address indexed token, uint256 amount, uint256 periods, address indexed recipient)"
-    ),
+    events: [paymentsPluginAbi[49], paymentsPluginAbi[51]],
     strict: true,
     fromBlock: blockNumber + BigInt(1),
   });

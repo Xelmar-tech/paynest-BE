@@ -9,7 +9,9 @@ async function getTxBlock(txHash: Address) {
   return tx.blockNumber;
 }
 
-async function getTxDate(txHash: Address) {
+async function getTxDate(txHash: Address, useNow: boolean) {
+  if (useNow) return new Date();
+
   const blockNumber = await getTxBlock(txHash);
   const block = await pbClient.getBlock({ blockNumber });
   const date = new Date(Number(block.timestamp) * 1000);
@@ -25,7 +27,7 @@ async function fixTransactionDate() {
     .execute();
 
   for (const txn of txns) {
-    const date = await getTxDate(txn.tx_id as Address);
+    const date = await getTxDate(txn.tx_id as Address, false);
     await db.updateTable("transaction").set({ created_at: date }).where("tx_id", "=", txn.tx_id).execute();
   }
 }

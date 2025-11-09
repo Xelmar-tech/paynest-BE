@@ -77,7 +77,7 @@ async function executeSchedulePayment(id: `0x${string}`) {
   try {
     await plugin.simulate.executeSchedule([id]);
   } catch (error) {
-    console.log(error, "simulate error");
+    // console.log(error, "simulate error");
     return await handleSimulationError(error, id, username, org.name); // skip this user as simulation fails
   }
 
@@ -122,7 +122,7 @@ async function handleSimulationError(error: unknown, id: string, username: strin
   }
 }
 
-export default async function scheduleUpcomingPayouts() {
+export default async function paySchedulePayouts() {
   const nowMs = Date.now();
   const now = Math.floor(nowMs / 1000);
   const schedules = await withRetry(() => loadUpcomingSchedules(now));

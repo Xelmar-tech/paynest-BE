@@ -12,11 +12,11 @@ import type { Transaction } from "kysely";
 import db from "../db";
 import { withRetry } from "../utils";
 
-export default async function addTransaction({ args, address, transactionHash, eventName }: TransactionLog) {
+export default async function addTransaction({ args, eventName, ...logs }: TransactionLog, now = false) {
   const { username, token, recipient, amount } = args;
   try {
     const existingTx = await withRetry(() =>
-      db.selectFrom("transaction").select("tx_id").where("tx_id", "=", transactionHash).executeTakeFirst()
+      db.selectFrom("transaction").select("tx_id").where("tx_id", "=", logs.transactionHash).executeTakeFirst()
     );
     if (existingTx) return true;
 
@@ -30,11 +30,11 @@ export default async function addTransaction({ args, address, transactionHash, e
         : (args as StreamExecutedArgs).streamId;
     const { org_id } = await db.selectFrom(table).select("org_id").where("id", "=", id).executeTakeFirstOrThrow();
 
-    const date = await getTxDate(transactionHash);
+    const date = await getTxDate(logs.transactionHash, now);
     const payout = formatUnits(amount, 6);
 
     const txn = {
-      tx_id: transactionHash,
+      tx_id: logs.transactionHash,
       network: NetworkType.BASE,
       amount: payout,
       asset: asset as Token,
@@ -51,7 +51,7 @@ export default async function addTransaction({ args, address, transactionHash, e
     await db.transaction().execute(async (tx) => {
       await tx.insertInto("transaction").values(txn).execute();
 
-      await updatePayment(address, payout, id, tx);
+      await updatePayment(logs.address, payout, id, tx);
 
       await tx
         .updateTable("user")

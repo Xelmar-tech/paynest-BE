@@ -10,5 +10,3 @@ export async function getConsts(network: NetworkType, key = PaymentKey) {
   const gas = await pbClient.estimateFeesPerGas({ chain });
   return { ...gas, chain, account: ADMIN } as const;
 }
-
-export const paynestDaoFactory = "0xD45F4bEF63BED11e9A67822A2774858D8859FcF3";

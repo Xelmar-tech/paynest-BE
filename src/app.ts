@@ -15,7 +15,7 @@ import { startHealthServer } from "./watchers/watchdog";
 
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
-    const success = await addTransaction(data);
+    const success = await addTransaction(data, true);
     if (success) await redis.del(EVENT_NAME.TRANSACTION + ":" + data.transactionHash);
   });
 
@@ -41,9 +41,9 @@ async function main() {
     }
   });
 
-  // await Promise.all([upcomingPayments(), payments(), completeProfile(), failedEvents()])
-  //   .then(() => console.log("Initial run completed successfully"))
-  //   .catch((e) => console.error("Error in initial run", e));
+  await Promise.all([/* upcomingPayments(), payments(), completeProfile(), */ failedEvents()])
+    .then(() => console.log("Initial run completed successfully"))
+    .catch((e) => console.error("Error in initial run", e));
 
   watch_transactions();
   watch_events();

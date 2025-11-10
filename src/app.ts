@@ -42,7 +42,7 @@ async function main() {
   });
 
   await Promise.all([/* upcomingPayments(), payments(), completeProfile(), */ failedEvents()])
-    .then(() => console.log("Initial run completed successfully"))
+    .then(() => console.log("Initial run completed 👍"))
     .catch((e) => console.error("Error in initial run", e));
 
   watch_transactions();

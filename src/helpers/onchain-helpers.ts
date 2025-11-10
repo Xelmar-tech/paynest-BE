@@ -32,4 +32,35 @@ async function fixTransactionDate() {
   }
 }
 
-export { getTxDate, fixTransactionDate, getTxBlock };
+const DAY = 24 * 60 * 60;
+async function getBlock24hAgo(latestBlock: bigint) {
+  const now = Math.floor(Date.now() / 1000);
+  const targetTimestamp = now - DAY;
+
+  // Rough guess: Base ~2 sec block time
+  let estimatedBlock = latestBlock - BigInt(DAY / 2);
+  if (estimatedBlock < 0) estimatedBlock = BigInt(0);
+
+  // Binary search to refine
+  let low = BigInt(0);
+  let high = latestBlock;
+  let best = estimatedBlock;
+
+  while (low <= high) {
+    const mid = (low + high) >> BigInt(1);
+    const block = await pbClient.getBlock({ blockNumber: mid });
+
+    if (!block?.timestamp) break;
+
+    if (block.timestamp > targetTimestamp) {
+      high = mid - BigInt(1);
+    } else {
+      best = mid;
+      low = mid + BigInt(1);
+    }
+  }
+
+  return best;
+}
+
+export { getTxDate, fixTransactionDate, getTxBlock, getBlock24hAgo };

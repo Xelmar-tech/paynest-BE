@@ -4,7 +4,7 @@ import { type Address, parseAbiItem } from "viem";
 import { pbClient } from "../utils/config";
 import addTransaction from "../core/transaction";
 import db from "../db";
-import { getTxBlock } from "./fix-transaction-dates";
+import { getTxBlock } from "./onchain-helpers";
 import { withRetry } from "../utils";
 import { paymentsPluginAbi } from "../constants/abi";
 

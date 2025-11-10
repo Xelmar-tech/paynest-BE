@@ -1,13 +1,13 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { formatUnits, getContract, type Address } from "viem";
+import { ContractFunctionRevertedError, formatUnits, getContract, type Address } from "viem";
 import { pbClient } from "../utils/config";
 import { getTokenByAddress } from "../utils/token";
 import { StreamState } from "../utils/onchain-utils";
 import { paymentsPluginAbi } from "../constants/abi";
 import type { DB, Token } from "../db/types";
 import { NetworkType, StreamState as stream_state } from "../db/types";
-import { getTxDate } from "../helpers/fix-transaction-dates";
+import { getTxDate } from "../helpers/onchain-helpers";
 import type { Transaction } from "kysely";
 import db from "../db";
 import { withRetry } from "../utils";
@@ -61,6 +61,16 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
     });
     return true;
   } catch (error) {
+    if (error instanceof ContractFunctionRevertedError) {
+      if (error.reason?.includes("execution reverted")) return true;
+
+      // Extract function name from "The contract function \"FUNC_NAME\" reverted." pattern
+      const functionNameMatch = error.shortMessage.match(/"([^"]+)"/);
+      const functionName = functionNameMatch ? functionNameMatch[1] : null;
+
+      if (functionName && ["getSchedule", "getStream"].includes(functionName)) return true;
+    }
+
     console.error("Error in addTransaction", error);
     return false;
   }

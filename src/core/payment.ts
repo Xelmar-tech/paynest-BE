@@ -76,12 +76,11 @@ async function executeSchedulePayment(id: `0x${string}`) {
 
   try {
     await plugin.simulate.executeSchedule([id]);
+    await plugin.write.executeSchedule([id], CONSTS);
   } catch (error) {
     // console.log(error, "simulate error");
     return await handleSimulationError(error, id, username, org.name); // skip this user as simulation fails
   }
-
-  await plugin.write.executeSchedule([id], CONSTS);
 }
 
 async function handleLowBalance(org: Pick<Organization, "owner" | "name" | "id">, username: string) {

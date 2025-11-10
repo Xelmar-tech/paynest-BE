@@ -56,6 +56,8 @@ export interface Organization {
   admin: string;
   id: string;
   info: string;
+  isDeployed: Generated<boolean>;
+  isMigrated: Generated<boolean>;
   logo: string;
   name: string;
   network: NetworkType;

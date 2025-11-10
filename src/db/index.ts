@@ -17,13 +17,13 @@ const db = new Kysely<DB>({
         sql: event.query.sql,
         params: event.query.parameters,
       });
-    } else {
-      console.log("Query executed: ", {
-        durationMs: event.queryDurationMillis,
-        sql: event.query.sql,
-        params: event.query.parameters,
-        kind: event.query.query.kind,
-      });
+      // } else {
+      //   console.log("Query executed: ", {
+      //     durationMs: event.queryDurationMillis,
+      //     sql: event.query.sql,
+      //     params: event.query.parameters,
+      //     kind: event.query.query.kind,
+      //   });
     }
   },
 });

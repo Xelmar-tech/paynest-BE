@@ -4,6 +4,7 @@
   "main": "dst/app.js",
   "scripts": {
     "app": "ts-node src/app.ts",
+    "lost-txns": "ts-node src/helpers/fetch-past-missing-txns.ts",
     "build": "tsc",
     "start": "node --max-old-space-size=512 dst/app.js",
     "test": "ts-node src/test.ts"

@@ -1,7 +1,7 @@
 import { ContractFunctionExecutionError, getContract } from "viem";
 import { paymentsPluginAbi } from "../constants/abi";
 import { getConsts } from "../constants";
-import { getBalance } from "../utils/onchain-utils";
+import { getRawBalance } from "../utils/onchain-utils";
 import { getAddressByToken } from "../utils/token";
 import { informPaymentDelay, warnFailedPayment } from "../email";
 import type { Organization } from "../db/types";
@@ -28,8 +28,8 @@ async function getScheduleAndOrgByScheduleId(id: `0x${string}`) {
     .select([
       "schedule.username",
       "schedule.asset",
-      "schedule.amount",
       "schedule.network",
+      "schedule.nextPayout",
 
       // organization fields
       "organization.name as org_name",
@@ -46,8 +46,8 @@ async function getScheduleAndOrgByScheduleId(id: `0x${string}`) {
   return {
     username: row.username,
     asset: row.asset,
-    amount: row.amount,
     network: row.network,
+    nextPayout: row.nextPayout,
     org: {
       name: row.org_name,
       owner: row.org_owner,
@@ -59,20 +59,24 @@ async function getScheduleAndOrgByScheduleId(id: `0x${string}`) {
 }
 
 async function executeSchedulePayment(id: `0x${string}`) {
-  const { username, asset, network, amount, org } = await getScheduleAndOrgByScheduleId(id);
+  const { username, asset, network, nextPayout, org } = await getScheduleAndOrgByScheduleId(id);
   const CONSTS = await getConsts(network);
 
   const token = getAddressByToken(network, asset);
   if (!token) return;
-
-  const balance = await getBalance(token, org.wallet as `0x${string}`);
-  if (balance < Number(amount)) return await handleLowBalance(org, username);
 
   const plugin = getContract({
     address: org.plugin as `0x${string}`,
     abi: paymentsPluginAbi,
     client: pbClient,
   });
+
+  const balance = await getRawBalance(token, org.wallet as `0x${string}`);
+  const schedule = await plugin.read.getSchedule([username, id]);
+
+  if (schedule.nextPayout > Number(nextPayout))
+    return await updateScheduleState(schedule.nextPayout, schedule.active, id);
+  if (balance < schedule.amount) return await handleLowBalance(org, username);
 
   try {
     await plugin.simulate.executeSchedule([username, id]);
@@ -106,6 +110,14 @@ async function handleLowBalance(org: Pick<Organization, "owner" | "name" | "id">
       recipient: user.name || username,
     }),
   ]);
+}
+
+async function updateScheduleState(nextPayout: number, active: boolean, id: `0x${string}`) {
+  await db
+    .updateTable("schedule")
+    .set({ nextPayout: nextPayout.toString(), active: active })
+    .where("id", "=", id)
+    .execute();
 }
 
 async function handleSimulationError(error: unknown, id: string, username: string, orgName: string) {

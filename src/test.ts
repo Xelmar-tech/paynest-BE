@@ -1,5 +1,3 @@
-import { startHealthServer } from "./watchers/watchdog";
+import scheduleUpcomingPayouts from "./core/payment";
 
-(async () => {
-  startHealthServer();
-})();
+(async () => {})();

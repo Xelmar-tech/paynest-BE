@@ -148,10 +148,13 @@ async function updateSchedule(
   const updateFields = {
     nextPayout: schedule.nextPayout.toString(),
     active: schedule.active,
-    payout: data.payout.toString(),
   };
 
-  await tx.updateTable("schedule").set(updateFields).where("id", "=", data.id).execute();
+  await tx
+    .updateTable("schedule")
+    .set((eb) => ({ ...updateFields, payout: eb("payout", "+", data.payout.toString()) }))
+    .where("id", "=", data.id)
+    .execute();
 }
 
 async function updateStream(
@@ -172,7 +175,6 @@ async function updateStream(
   const updateFields = {
     lastPayout: Math.floor(new Date().getTime() / 1000).toString(),
     active: activeState,
-    payout: data.payout.toString(),
     state: activeState
       ? stream_state.ACTIVE
       : stream.state === StreamState.Paused
@@ -180,7 +182,11 @@ async function updateStream(
       : stream_state.CANCELLED,
   };
 
-  await tx.updateTable("stream").set(updateFields).where("id", "=", data.id).execute();
+  await tx
+    .updateTable("stream")
+    .set((eb) => ({ ...updateFields, payout: eb("payout", "+", data.payout.toString()) }))
+    .where("id", "=", data.id)
+    .execute();
 }
 
 export { updateSchedule, updateStream, getScheduleInfo, getStreamInfo };

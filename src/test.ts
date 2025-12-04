@@ -1,5 +1,5 @@
-import trackDeposits from "./crons/deposits-tracking";
+import trackAdminEvents from "./crons/admin-actions-tracking";
 
 (async () => {
-  await trackDeposits();
+  await trackAdminEvents();
 })();

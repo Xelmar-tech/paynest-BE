@@ -1,10 +1,4 @@
-import {
-  type Address,
-  checksumAddress,
-  erc20Abi,
-  formatUnits,
-  getAddress,
-} from "viem";
+import { erc20Abi, formatUnits, getAddress } from "viem";
 import { deploymentBlock, USDC } from "../constants";
 import db from "../db";
 import redis from "../lib/redis";
@@ -54,18 +48,19 @@ export default async function trackDeposits() {
     const tx = {
       tx_id: hash,
       network: NetworkType.BASE,
-      amount: amount,
+      amount,
       asset: Token.USDC,
       recipient: to,
       org_id: org.id,
-      username: null,
-      schedule_id: null,
-      stream_id: null,
       created_at: date,
       type: TransactionType.DEPOSIT,
     } as const;
 
-    await db.insertInto("transaction").values(tx).executeTakeFirst();
+    await db
+      .insertInto("transaction")
+      .values(tx)
+      .onConflict((oc) => oc.column("tx_id").doNothing())
+      .execute();
   }
 
   const nowBlock = await pbClient.getBlockNumber();

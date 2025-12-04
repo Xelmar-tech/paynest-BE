@@ -13,6 +13,7 @@ import redis from "./lib/redis";
 import { scheduleCreatedEvent } from "./core/schedule-event";
 import { startHealthServer } from "./watchers/watchdog";
 import trackDeposits from "./crons/deposits-tracking";
+import trackAdminEvents from "./crons/admin-actions-tracking";
 
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
@@ -44,15 +45,11 @@ async function main() {
   cron.schedule("30 9 * * *", async () => {
     try {
       await Promise.all([completeProfile(), failedEvents()]);
-      await trackDeposits();
+      await Promise.all([trackDeposits(), trackAdminEvents()]);
     } catch (error) {
       console.error("Error in complete profile or failed events", error);
     }
   });
-
-  // await Promise.all([upcomingPayments(), payments(), completeProfile(), failedEvents()])
-  //   .then(() => console.log("Initial run completed successfully"))
-  //   .catch((e) => console.error("Error in initial run", e));
 
   watch_transactions();
   watch_events();

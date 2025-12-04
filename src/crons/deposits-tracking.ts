@@ -20,7 +20,6 @@ export default async function trackDeposits() {
 
   const wallets = org_wallets.map((org) => {
     const addr = org.wallet.trim().toLowerCase();
-    console.log(addr.length);
     const address = getAddress(addr);
     return address;
   });

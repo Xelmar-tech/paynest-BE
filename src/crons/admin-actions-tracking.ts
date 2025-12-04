@@ -39,7 +39,6 @@ export default async function trackAdminEvents() {
   console.log(`Found ${logs.length} admin proposal events`);
 
   for (const log of logs) {
-    const { actions } = log.args;
     const hash = log.transactionHash;
 
     const org = org_admins.find(
@@ -47,49 +46,45 @@ export default async function trackAdminEvents() {
     );
     if (!org) continue;
 
-    for (const action of actions) {
+    for (const action of log.args.actions) {
       if (action.to.toLowerCase() !== USDC.toLowerCase()) continue;
 
-      for (const action of actions) {
-        if (action.to.toLowerCase() !== USDC.toLowerCase()) continue;
+      try {
+        const decoded = decodeFunctionData({
+          abi: erc20Abi,
+          data: action.data,
+        });
 
-        try {
-          const decoded = decodeFunctionData({
-            abi: erc20Abi,
-            data: action.data,
-          });
+        if (decoded.functionName === "transfer") {
+          const [recipient, amountWei] = decoded.args;
+          const amount = formatUnits(amountWei, 6);
 
-          if (decoded.functionName === "transfer") {
-            const [recipient, amountWei] = decoded.args;
-            const amount = formatUnits(amountWei, 6);
-
-            let type = TransactionType.WITHDRAWAL;
-            if (recipient.toLowerCase() === FEE_COLLECTOR.toLowerCase()) {
-              type = TransactionType.FEE;
-            }
-
-            const date = await getTxDate(hash);
-
-            const tx = {
-              tx_id: hash,
-              network: NetworkType.BASE,
-              amount,
-              asset: Token.USDC,
-              recipient,
-              org_id: org.id,
-              created_at: date,
-              type,
-            } as const;
-
-            await db
-              .insertInto("transaction")
-              .values(tx)
-              .onConflict((oc) => oc.column("tx_id").doNothing())
-              .execute();
+          let type = TransactionType.WITHDRAWAL;
+          if (recipient.toLowerCase() === FEE_COLLECTOR.toLowerCase()) {
+            type = TransactionType.FEE;
           }
-        } catch (e) {
-          console.error(`Failed to decode action in tx ${hash}`, e);
+
+          const date = await getTxDate(hash);
+
+          const tx = {
+            tx_id: hash,
+            network: NetworkType.BASE,
+            amount,
+            asset: Token.USDC,
+            recipient,
+            org_id: org.id,
+            created_at: date,
+            type,
+          } as const;
+
+          await db
+            .insertInto("transaction")
+            .values(tx)
+            .onConflict((oc) => oc.column("tx_id").doNothing())
+            .execute();
         }
+      } catch (e) {
+        console.error(`Failed to decode action in tx ${hash}`, e);
       }
     }
   }

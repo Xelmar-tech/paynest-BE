@@ -1,24 +1,46 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { formatUnits, keccak256, toBytes, getContract, decodeEventLog, type Address } from "viem";
+import {
+  formatUnits,
+  keccak256,
+  toBytes,
+  getContract,
+  decodeEventLog,
+  type Address,
+} from "viem";
 import { pbClient } from "../utils/config";
 import { getAddressByToken } from "../utils/token";
 import { getDecimals, StreamState } from "../utils/onchain-utils";
 import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
 import type { DB } from "../db/types";
-import { NetworkType, StreamState as stream_state } from "../db/types";
+import {
+  NetworkType,
+  StreamState as stream_state,
+  TransactionType,
+} from "../db/types";
 import { getTxDate } from "../helpers/fix-transaction-dates";
 import type { Transaction } from "kysely";
 import db from "../db";
 import { withRetry } from "../utils";
 
-const withdrawTopic = keccak256(toBytes("Withdraw(address,address,uint216,bytes32,uint256)"));
+const withdrawTopic = keccak256(
+  toBytes("Withdraw(address,address,uint216,bytes32,uint256)")
+);
 
-export default async function addTransaction({ args, address, transactionHash, eventName }: TransactionLog) {
+export default async function addTransaction({
+  args,
+  address,
+  transactionHash,
+  eventName,
+}: TransactionLog) {
   const { username } = args;
   try {
     const existingTx = await withRetry(() =>
-      db.selectFrom("transaction").select("tx_id").where("tx_id", "=", transactionHash).executeTakeFirst()
+      db
+        .selectFrom("transaction")
+        .select("tx_id")
+        .where("tx_id", "=", transactionHash)
+        .executeTakeFirst()
     );
     if (existingTx) return true;
 
@@ -29,6 +51,7 @@ export default async function addTransaction({ args, address, transactionHash, e
     if (!info) return false;
 
     const date = await getTxDate(transactionHash);
+
     const txn = {
       tx_id: transactionHash,
       network: NetworkType.BASE,
@@ -37,12 +60,20 @@ export default async function addTransaction({ args, address, transactionHash, e
       recipient: info.recipient,
       org_id: info.orgId,
       username,
-      schedule_id: eventName === "ScheduleExecuted" ? (args as ScheduleExecutedArgs).scheduleId : null,
-      stream_id: eventName !== "ScheduleExecuted" ? (args as StreamExecutedArgs).streamId : null,
+      schedule_id:
+        eventName === "ScheduleExecuted"
+          ? (args as ScheduleExecutedArgs).scheduleId
+          : null,
+      stream_id:
+        eventName !== "ScheduleExecuted"
+          ? (args as StreamExecutedArgs).streamId
+          : null,
       created_at: date,
+      type: TransactionType.SCHEDULE,
     } as const;
 
-    const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
+    const updatePayment =
+      eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
 
     const _payout =
       eventName === "StreamStateChanged"
@@ -87,7 +118,11 @@ export default async function addTransaction({ args, address, transactionHash, e
 async function getScheduleInfo(args: ScheduleExecutedArgs) {
   try {
     const [{ org_id, asset }, decimals] = await Promise.all([
-      db.selectFrom("schedule").select(["asset", "org_id"]).where("id", "=", args.scheduleId).executeTakeFirstOrThrow(),
+      db
+        .selectFrom("schedule")
+        .select(["asset", "org_id"])
+        .where("id", "=", args.scheduleId)
+        .executeTakeFirstOrThrow(),
       getDecimals(args.token),
     ]);
 
@@ -105,7 +140,11 @@ async function getStreamInfo(hash: Address, id: Address) {
       pbClient.getTransactionReceipt({
         hash,
       }),
-      db.selectFrom("stream").select(["org_id", "asset", "network"]).where("id", "=", id).executeTakeFirstOrThrow(),
+      db
+        .selectFrom("stream")
+        .select(["org_id", "asset", "network"])
+        .where("id", "=", id)
+        .executeTakeFirstOrThrow(),
     ]);
 
     const token = getAddressByToken(network, asset);
@@ -152,7 +191,10 @@ async function updateSchedule(
 
   await tx
     .updateTable("schedule")
-    .set((eb) => ({ ...updateFields, payout: eb("payout", "+", data.payout.toString()) }))
+    .set((eb) => ({
+      ...updateFields,
+      payout: eb("payout", "+", data.payout.toString()),
+    }))
     .where("id", "=", data.id)
     .execute();
 }
@@ -184,7 +226,10 @@ async function updateStream(
 
   await tx
     .updateTable("stream")
-    .set((eb) => ({ ...updateFields, payout: eb("payout", "+", data.payout.toString()) }))
+    .set((eb) => ({
+      ...updateFields,
+      payout: eb("payout", "+", data.payout.toString()),
+    }))
     .where("id", "=", data.id)
     .execute();
 }

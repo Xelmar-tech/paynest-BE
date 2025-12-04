@@ -1,3 +1,5 @@
-import scheduleUpcomingPayouts from "./core/payment";
+import trackDeposits from "./crons/deposits-tracking";
 
-(async () => {})();
+(async () => {
+  await trackDeposits();
+})();

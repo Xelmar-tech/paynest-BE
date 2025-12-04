@@ -31,6 +31,15 @@ export enum Token {
   USDT = "USDT",
 }
 
+export enum TransactionType {
+  DEPOSIT = "deposit",
+  FEE = "fee",
+  INVOICE = "invoice",
+  SCHEDULE = "schedule",
+  STREAM = "stream",
+  WITHDRAWAL = "withdrawal",
+}
+
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
@@ -56,6 +65,8 @@ export interface Organization {
   admin: string;
   id: string;
   info: string;
+  isDeployed: Generated<boolean>;
+  isMigrated: Generated<boolean>;
   logo: string;
   name: string;
   network: NetworkType;
@@ -110,7 +121,8 @@ export interface Transaction {
   schedule_id: string | null;
   stream_id: string | null;
   tx_id: string;
-  username: string;
+  type: TransactionType;
+  username: string | null;
 }
 
 export interface User {

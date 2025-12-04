@@ -12,17 +12,25 @@ import addTransaction from "./core/transaction";
 import redis from "./lib/redis";
 import { scheduleCreatedEvent } from "./core/schedule-event";
 import { startHealthServer } from "./watchers/watchdog";
+import trackDeposits from "./crons/deposits-tracking";
 
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
     const success = await addTransaction(data);
-    if (success) await redis.del(EVENT_NAME.TRANSACTION + ":" + data.transactionHash);
+    if (success)
+      await redis.del(EVENT_NAME.TRANSACTION + ":" + data.transactionHash);
   });
 
-  event.addListener(EVENT_NAME.SCHEDULE_CREATED, async (data: ScheduleCreatedLog) => {
-    const success = await scheduleCreatedEvent(data);
-    if (success) await redis.del(EVENT_NAME.SCHEDULE_CREATED + ":" + data.transactionHash);
-  });
+  event.addListener(
+    EVENT_NAME.SCHEDULE_CREATED,
+    async (data: ScheduleCreatedLog) => {
+      const success = await scheduleCreatedEvent(data);
+      if (success)
+        await redis.del(
+          EVENT_NAME.SCHEDULE_CREATED + ":" + data.transactionHash
+        );
+    }
+  );
 
   cron.schedule("*/10 * * * *", async () => {
     try {
@@ -36,6 +44,7 @@ async function main() {
   cron.schedule("30 9 * * *", async () => {
     try {
       await Promise.all([completeProfile(), failedEvents()]);
+      await trackDeposits();
     } catch (error) {
       console.error("Error in complete profile or failed events", error);
     }

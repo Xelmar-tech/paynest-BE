@@ -9,7 +9,7 @@ async function getTxBlock(txHash: Address) {
   return tx.blockNumber;
 }
 
-async function getTxDate(txHash: Address, useNow: boolean) {
+async function getTxDate(txHash: Address, useNow: boolean = false) {
   if (useNow) return new Date();
 
   const blockNumber = await getTxBlock(txHash);

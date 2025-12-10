@@ -1,30 +1,19 @@
-import {
-  parseAbiItem,
-  formatUnits,
-  decodeFunctionData,
-  erc20Abi,
-  getAddress,
-} from "viem";
+import { parseAbiItem, formatUnits, decodeFunctionData, erc20Abi, getAddress } from "viem";
 import { deploymentBlock, FEE_COLLECTOR, USDC } from "../constants";
 import db from "../db";
 import redis from "../lib/redis";
 import { pbClient } from "../utils/config";
-import { getTxDate } from "../helpers/fix-transaction-dates";
 import { NetworkType, Token, TransactionType } from "../db/types";
+import { getTxDate } from "../helpers/onchain-helpers";
 
 const proposalEvent = parseAbiItem(
   "event ProposalCreated(uint256 indexed proposalId, address indexed creator, uint64 startDate, uint64 endDate, bytes metadata, (address to, uint256 value, bytes data)[] actions, uint256 allowFailureMap)"
 );
 
 export default async function trackAdminEvents() {
-  const org_admins = await db
-    .selectFrom("organization")
-    .select(["admin", "id"])
-    .execute();
+  const org_admins = await db.selectFrom("organization").select(["admin", "id"]).execute();
 
-  const validAdminContracts = org_admins.map((org) =>
-    getAddress(org.admin.toLowerCase())
-  );
+  const validAdminContracts = org_admins.map((org) => getAddress(org.admin.toLowerCase()));
 
   const lastBlock = await redis.get<number>("admin-event-block");
   const from = lastBlock ? BigInt(lastBlock) : BigInt(deploymentBlock);
@@ -41,9 +30,7 @@ export default async function trackAdminEvents() {
   for (const log of logs) {
     const hash = log.transactionHash;
 
-    const org = org_admins.find(
-      (o) => o.admin.toLowerCase() === log.address.toLowerCase()
-    );
+    const org = org_admins.find((o) => o.admin.toLowerCase() === log.address.toLowerCase());
     if (!org) continue;
 
     for (const action of log.args.actions) {

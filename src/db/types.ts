@@ -61,6 +61,19 @@ export interface _PrismaMigrations {
   started_at: Generated<Timestamp>;
 }
 
+export interface Invoice {
+  amount: Numeric;
+  asset: Token;
+  created_at: Generated<Timestamp>;
+  id: string;
+  network: NetworkType;
+  org_id: string;
+  paidAt: Timestamp | null;
+  rejectedAt: Timestamp | null;
+  updated_at: Timestamp;
+  username: string;
+}
+
 export interface Organization {
   admin: string;
   id: string;
@@ -115,6 +128,7 @@ export interface Transaction {
   amount: Numeric;
   asset: Token;
   created_at: Generated<Timestamp>;
+  invoice_id: string | null;
   network: NetworkType;
   org_id: string;
   recipient: string;
@@ -149,6 +163,7 @@ export interface Wallet {
 
 export interface DB {
   _prisma_migrations: _PrismaMigrations;
+  invoice: Invoice;
   organization: Organization;
   schedule: Schedule;
   stream: Stream;

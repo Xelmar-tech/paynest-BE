@@ -72,7 +72,7 @@ async function executeSchedulePayment(id: `0x${string}`) {
   });
 
   const balance = await getRawBalance(token, org.wallet as `0x${string}`);
-  const schedule = await plugin.read.getSchedule([username, id]);
+  const schedule = await plugin.read.getSchedule([id]);
 
   if (schedule.nextPayout > Number(nextPayout))
     return await updateScheduleState(schedule.nextPayout, schedule.active, id);

@@ -20,13 +20,14 @@ interface InvoicePaid {
   invoiceId: Address;
   token: Address;
   amount: bigint;
+  recipient: Address;
 }
 
 interface TransactionLog {
-  eventName: "ScheduleExecuted" | "StreamExecuted";
+  eventName: "ScheduleExecuted" | "StreamExecuted" | "InvoicePaid";
   transactionHash: Address;
   address: Address;
-  args: ScheduleExecutedArgs | StreamExecutedArgs;
+  args: ScheduleExecutedArgs | StreamExecutedArgs | InvoicePaid;
 }
 
 interface ScheduleCreatedArgs {

@@ -3,14 +3,11 @@ import { deploymentBlock, USDC } from "../constants";
 import db from "../db";
 import redis from "../lib/redis";
 import { pbClient } from "../utils/config";
-import { getTxDate } from "../helpers/fix-transaction-dates";
 import { NetworkType, Token, TransactionType } from "../db/types";
+import { getTxDate } from "../helpers/onchain-helpers";
 
 export default async function trackDeposits() {
-  const org_wallets = await db
-    .selectFrom("organization")
-    .select("wallet")
-    .execute();
+  const org_wallets = await db.selectFrom("organization").select("wallet").execute();
 
   const wallets = org_wallets.map((org) => {
     const addr = org.wallet.trim().toLowerCase();
@@ -38,11 +35,7 @@ export default async function trackDeposits() {
     const amount = formatUnits(value, 6);
 
     const date = await getTxDate(hash);
-    const org = await db
-      .selectFrom("organization")
-      .select("id")
-      .where("wallet", "ilike", to)
-      .executeTakeFirst();
+    const org = await db.selectFrom("organization").select("id").where("wallet", "ilike", to).executeTakeFirst();
     if (!org) continue;
 
     const tx = {

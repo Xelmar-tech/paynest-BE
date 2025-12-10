@@ -1,6 +1,6 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { type Address, parseAbiItem } from "viem";
+import { type Address } from "viem";
 import { pbClient } from "../utils/config";
 import addTransaction from "../core/transaction";
 import db from "../db";
@@ -15,7 +15,7 @@ export default async function fetchPastMissingTxns() {
   const blockNumber = await getTxBlock(tx_id as Address);
 
   const logs = await pbClient.getLogs({
-    events: [paymentsPluginAbi[49], paymentsPluginAbi[51]],
+    events: [paymentsPluginAbi[49], paymentsPluginAbi[51], paymentsPluginAbi[44]],
     strict: true,
     fromBlock: blockNumber + BigInt(1),
   });

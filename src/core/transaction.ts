@@ -6,7 +6,7 @@ import { getTokenByAddress } from "../utils/token";
 import { StreamState } from "../utils/onchain-utils";
 import { paymentsPluginAbi } from "../constants/abi";
 import type { DB, Token } from "../db/types";
-import { NetworkType, StreamState as stream_state } from "../db/types";
+import { NetworkType, StreamState as stream_state, TransactionType } from "../db/types";
 import { getTxDate } from "../helpers/onchain-helpers";
 import type { Transaction } from "kysely";
 import db from "../db";
@@ -33,6 +33,13 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
     const date = await getTxDate(logs.transactionHash, now);
     const payout = formatUnits(amount, 6);
 
+    const type =
+      eventName === "InvoicePaid"
+        ? TransactionType.INVOICE
+        : eventName === "ScheduleExecuted"
+        ? TransactionType.SCHEDULE
+        : TransactionType.STREAM;
+
     const txn = {
       tx_id: logs.transactionHash,
       network: NetworkType.BASE,
@@ -43,16 +50,19 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
       username,
       schedule_id: eventName === "ScheduleExecuted" ? (args as ScheduleExecutedArgs).scheduleId : null,
       stream_id: eventName === "StreamExecuted" ? (args as StreamExecutedArgs).streamId : null,
+      invoice_id: eventName === "InvoicePaid" ? (args as InvoicePaid).invoiceId : null,
       created_at: date,
+      type,
     };
 
-    const updatePayment =
-      eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
+    const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
 
     await db.transaction().execute(async (tx) => {
       await tx.insertInto("transaction").values(txn).execute();
 
-      await updatePayment(logs.address, payout, id, tx);
+      if (eventName === "InvoicePaid") {
+        await tx.updateTable("invoice").set({ paidAt: new Date() }).where("id", "=", id).execute();
+      } else await updatePayment(logs.address, payout, id, tx);
 
       await tx
         .updateTable("user")

@@ -1,6 +1,6 @@
 import { pbClient } from "../utils/config";
 import { paymentsPluginAbi } from "../constants/abi";
-import { scheduleCreatedEvent } from "../core/plugin-event";
+import { pluginEvent } from "../core/plugin-event";
 
 export default async function fetchCreatedSchedules() {
   const blockNumber = await pbClient.getBlockNumber();
@@ -12,7 +12,7 @@ export default async function fetchCreatedSchedules() {
   });
 
   for (const log of logs) {
-    const { args, address, transactionHash } = log;
-    await scheduleCreatedEvent({ args, address, transactionHash }, true);
+    const { args, address, transactionHash, eventName } = log;
+    await pluginEvent({ args, address, transactionHash, eventName }, true);
   }
 }

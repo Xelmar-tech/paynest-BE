@@ -18,7 +18,7 @@ export function startHealthServer() {
         res.end(
           JSON.stringify({
             status: "ok",
-            block: block.toString()migrate to v2,
+            block: block.toString(),
             redis: "connected",
           })
         );

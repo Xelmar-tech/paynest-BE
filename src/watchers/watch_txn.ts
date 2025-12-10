@@ -8,7 +8,7 @@ import { paymentsPluginAbi } from "../constants/abi";
 
 export default async function watch_transactions() {
   wsClient.watchEvent({
-    events: [paymentsPluginAbi[49], paymentsPluginAbi[51]],
+    events: [paymentsPluginAbi[49], paymentsPluginAbi[51], paymentsPluginAbi[44]],
     strict: true,
     fromBlock: BigInt(36456334),
     onLogs: async (logs) => {

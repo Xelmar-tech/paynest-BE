@@ -1,9 +1,8 @@
 import EventEmitter from "node:events";
 
 enum EVENT_NAME {
-  SCHEDULE_CREATED = "schedule_created",
+  EVENT = "plugin-event",
   TRANSACTION = "transaction",
-  TEST = "test",
 }
 
 const event = new EventEmitter();

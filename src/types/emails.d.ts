@@ -26,3 +26,15 @@ type CompleteProfileParams = {
   noWallet: boolean;
   email: string;
 };
+
+type SharedPluginActionValues = {
+  token: string;
+  decimals: number;
+  user: {
+    name: string | null;
+    email: string;
+  };
+  org: {
+    name: string;
+  };
+};

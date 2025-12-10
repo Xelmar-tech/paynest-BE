@@ -10,7 +10,7 @@ import failedEvents from "./crons/failed-events";
 import { event, EVENT_NAME } from "./lib/event";
 import addTransaction from "./core/transaction";
 import redis from "./lib/redis";
-import { scheduleCreatedEvent } from "./core/schedule-event";
+import { pluginEvent } from "./core/plugin-event";
 import { startHealthServer } from "./watchers/watchdog";
 import trackDeposits from "./crons/deposits-tracking";
 import trackAdminEvents from "./crons/admin-actions-tracking";
@@ -18,19 +18,13 @@ import trackAdminEvents from "./crons/admin-actions-tracking";
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
     const success = await addTransaction(data, true);
-    if (success) await redis.del(EVENT_NAME.TRANSACTION + ":" + data.transactionHash);
+    if (success) await redis.del(`${EVENT_NAME.TRANSACTION}:${data.transactionHash}`);
   });
 
-  event.addListener(
-    EVENT_NAME.SCHEDULE_CREATED,
-    async (data: ScheduleCreatedLog) => {
-      const success = await scheduleCreatedEvent(data);
-      if (success)
-        await redis.del(
-          EVENT_NAME.SCHEDULE_CREATED + ":" + data.transactionHash
-        );
-    }
-  );
+  event.addListener(EVENT_NAME.EVENT, async (data: PluginEventLog) => {
+    const success = await pluginEvent(data);
+    if (success) await redis.del(`${EVENT_NAME.EVENT}:${data.transactionHash}`);
+  });
 
   cron.schedule("*/10 * * * *", async () => {
     try {

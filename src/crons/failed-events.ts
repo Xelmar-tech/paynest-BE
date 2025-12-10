@@ -1,6 +1,6 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { scheduleCreatedEvent } from "../core/schedule-event";
+import { scheduleCreatedEvent } from "../core/plugin-event";
 import addTransaction from "../core/transaction";
 import { EVENT_NAME } from "../lib/event";
 import redis from "../lib/redis";

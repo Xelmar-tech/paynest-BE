@@ -39,8 +39,25 @@ interface ScheduleCreatedArgs {
   isOneTime: boolean;
 }
 
-interface ScheduleCreatedLog {
+interface InvoiceCreatedArgs {
+  username: string;
+  invoiceId: Address;
+  token: Address;
+  amount: bigint;
+}
+
+interface StreamCreatedArgs {
+  username: string;
+  streamId: Address;
+  token: Address;
+  amountPerSec: bigint;
+}
+
+type PluginCreateActionsLog = ScheduleCreatedArgs | InvoiceCreatedArgs | StreamCreatedArgs;
+
+interface PluginEventLog {
   address: Address;
-  args: ScheduleCreatedArgs;
+  args: PluginCreateActionsLog;
   transactionHash: Address;
+  eventName: "InvoiceCreated" | "ScheduleCreated" | "StreamCreated";
 }

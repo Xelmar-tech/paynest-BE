@@ -20,8 +20,12 @@ export default async function fetchPastMissingTxns() {
     fromBlock: blockNumber + BigInt(1),
   });
 
+  console.log(logs.length, "Missing transactions found");
+
   for (const log of logs) {
     const { args, address, transactionHash, eventName } = log;
     await addTransaction({ args, address, transactionHash, eventName });
   }
 }
+
+fetchPastMissingTxns();

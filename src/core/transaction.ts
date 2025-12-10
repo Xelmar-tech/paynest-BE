@@ -46,7 +46,8 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
       created_at: date,
     };
 
-    const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
+    const updatePayment =
+      eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
 
     await db.transaction().execute(async (tx) => {
       await tx.insertInto("transaction").values(txn).execute();

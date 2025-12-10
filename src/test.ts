@@ -1,5 +1,5 @@
-import { startHealthServer } from "./watchers/watchdog";
+import trackAdminEvents from "./crons/admin-actions-tracking";
 
 (async () => {
-  startHealthServer();
+  await trackAdminEvents();
 })();

@@ -10,7 +10,7 @@ export async function getDecimals(token: Address) {
   return decimals;
 }
 
-async function getRawBalance(token: Address, contract: Address) {
+export async function getRawBalance(token: Address, contract: Address) {
   const balanceOf = await client.readContract({
     abi: erc20Abi,
     address: token,

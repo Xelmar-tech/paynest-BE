@@ -6,7 +6,7 @@ export default async function fetchCreatedSchedules() {
   const blockNumber = await pbClient.getBlockNumber();
 
   const logs = await pbClient.getLogs({
-    event: paymentsPluginAbi[44],
+    event: paymentsPluginAbi[48],
     strict: true,
     fromBlock: blockNumber,
   });

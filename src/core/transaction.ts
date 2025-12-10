@@ -1,188 +1,90 @@
 /// <reference path="../types/logs.d.ts" />
 
-import {
-  formatUnits,
-  keccak256,
-  toBytes,
-  getContract,
-  decodeEventLog,
-  type Address,
-} from "viem";
+import { ContractFunctionRevertedError, formatUnits, getContract, type Address } from "viem";
 import { pbClient } from "../utils/config";
-import { getAddressByToken } from "../utils/token";
-import { getDecimals, StreamState } from "../utils/onchain-utils";
-import { llamaPayAbi, paymentsPluginAbi } from "../constants/abi";
-import type { DB } from "../db/types";
-import {
-  NetworkType,
-  StreamState as stream_state,
-  TransactionType,
-} from "../db/types";
-import { getTxDate } from "../helpers/fix-transaction-dates";
+import { getTokenByAddress } from "../utils/token";
+import { StreamState } from "../utils/onchain-utils";
+import { paymentsPluginAbi } from "../constants/abi";
+import type { DB, Token } from "../db/types";
+import { NetworkType, StreamState as stream_state } from "../db/types";
+import { getTxDate } from "../helpers/onchain-helpers";
 import type { Transaction } from "kysely";
 import db from "../db";
 import { withRetry } from "../utils";
 
-const withdrawTopic = keccak256(
-  toBytes("Withdraw(address,address,uint216,bytes32,uint256)")
-);
-
-export default async function addTransaction({
-  args,
-  address,
-  transactionHash,
-  eventName,
-}: TransactionLog) {
-  const { username } = args;
+export default async function addTransaction({ args, eventName, ...logs }: TransactionLog, now = false) {
+  const { username, token, recipient, amount } = args;
   try {
     const existingTx = await withRetry(() =>
-      db
-        .selectFrom("transaction")
-        .select("tx_id")
-        .where("tx_id", "=", transactionHash)
-        .executeTakeFirst()
+      db.selectFrom("transaction").select("tx_id").where("tx_id", "=", logs.transactionHash).executeTakeFirst()
     );
     if (existingTx) return true;
 
-    const info = !("streamId" in args)
-      ? await getScheduleInfo(args)
-      : await getStreamInfo(transactionHash, args.streamId);
+    const asset = getTokenByAddress(NetworkType.BASE, token);
+    if (!asset) throw new Error(`${token} has no asset for the BASE network, transaction not supported for storage`);
 
-    if (!info) return false;
+    const table = eventName === "ScheduleExecuted" ? "schedule" : "stream";
+    const id =
+      eventName === "ScheduleExecuted"
+        ? (args as ScheduleExecutedArgs).scheduleId
+        : (args as StreamExecutedArgs).streamId;
+    const { org_id } = await db.selectFrom(table).select("org_id").where("id", "=", id).executeTakeFirstOrThrow();
 
-    const date = await getTxDate(transactionHash);
+    const date = await getTxDate(logs.transactionHash, now);
+    const payout = formatUnits(amount, 6);
 
     const txn = {
-      tx_id: transactionHash,
+      tx_id: logs.transactionHash,
       network: NetworkType.BASE,
-      amount: info.payout,
-      asset: info.asset,
-      recipient: info.recipient,
-      org_id: info.orgId,
+      amount: payout,
+      asset: asset as Token,
+      recipient,
+      org_id,
       username,
-      schedule_id:
-        eventName === "ScheduleExecuted"
-          ? (args as ScheduleExecutedArgs).scheduleId
-          : null,
-      stream_id:
-        eventName !== "ScheduleExecuted"
-          ? (args as StreamExecutedArgs).streamId
-          : null,
+      schedule_id: eventName === "ScheduleExecuted" ? (args as ScheduleExecutedArgs).scheduleId : null,
+      stream_id: eventName === "StreamExecuted" ? (args as StreamExecutedArgs).streamId : null,
       created_at: date,
-      type: TransactionType.SCHEDULE,
-    } as const;
+    };
 
     const updatePayment =
       eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
 
-    const _payout =
-      eventName === "StreamStateChanged"
-        ? (args as StreamStateChangedArgs).newState === StreamState.Active
-          ? "0"
-          : info.payout
-        : info.payout;
-    const _id =
-      eventName === "ScheduleExecuted"
-        ? (args as ScheduleExecutedArgs).scheduleId
-        : (args as StreamExecutedArgs).streamId;
-
-    console.log(_payout, txn, date, info);
-
     await db.transaction().execute(async (tx) => {
       await tx.insertInto("transaction").values(txn).execute();
 
-      await updatePayment(
-        pbClient,
-        address,
-        {
-          username,
-          payout: Number(_payout),
-          id: _id,
-        },
-        tx
-      );
+      await updatePayment(logs.address, payout, id, tx);
 
       await tx
         .updateTable("user")
-        .set((eb) => ({ total_payout: eb("total_payout", "+", _payout) }))
+        .set((eb) => ({ total_payout: eb("total_payout", "+", payout) }))
         .where("username", "=", username)
         .execute();
     });
     return true;
   } catch (error) {
+    if (error instanceof ContractFunctionRevertedError) {
+      if (error.reason?.includes("execution reverted")) return true;
+
+      // Extract function name from "The contract function \"FUNC_NAME\" reverted." pattern
+      const functionNameMatch = error.shortMessage.match(/"([^"]+)"/);
+      const functionName = functionNameMatch ? functionNameMatch[1] : null;
+
+      if (functionName && ["getSchedule", "getStream"].includes(functionName)) return true;
+    }
+
     console.error("Error in addTransaction", error);
     return false;
   }
 }
 
-async function getScheduleInfo(args: ScheduleExecutedArgs) {
-  try {
-    const [{ org_id, asset }, decimals] = await Promise.all([
-      db
-        .selectFrom("schedule")
-        .select(["asset", "org_id"])
-        .where("id", "=", args.scheduleId)
-        .executeTakeFirstOrThrow(),
-      getDecimals(args.token),
-    ]);
-
-    const payout = formatUnits(args.amount, decimals);
-    return { payout, recipient: args.recipient, orgId: org_id, asset };
-  } catch (error) {
-    console.error("Error in getScheduleInfo", error);
-    return;
-  }
-}
-
-async function getStreamInfo(hash: Address, id: Address) {
-  try {
-    const [{ logs }, { org_id, asset, network }] = await Promise.all([
-      pbClient.getTransactionReceipt({
-        hash,
-      }),
-      db
-        .selectFrom("stream")
-        .select(["org_id", "asset", "network"])
-        .where("id", "=", id)
-        .executeTakeFirstOrThrow(),
-    ]);
-
-    const token = getAddressByToken(network, asset);
-    if (!token) return;
-
-    const decimals = await getDecimals(token);
-
-    const [withdraw] = logs
-      .filter((log) => log.topics[0] === withdrawTopic)
-      .map((log) =>
-        decodeEventLog({
-          abi: llamaPayAbi,
-          data: log.data,
-          topics: log.topics,
-        })
-      );
-
-    const payout = formatUnits(withdraw.args.amount, decimals);
-    return { payout, recipient: withdraw.args.to, orgId: org_id, asset };
-  } catch (error) {
-    console.error("Error in getStreamInfo", error);
-    return;
-  }
-}
-
-async function updateSchedule(
-  client: typeof pbClient,
-  pluginAddr: Address,
-  data: { username: string; payout: number; id: Address },
-  tx: Transaction<DB>
-) {
-  const plugin = getContract({
-    address: pluginAddr,
+async function updateSchedule(plugin: Address, payout: string, id: Address, tx: Transaction<DB>) {
+  const pluginContract = getContract({
+    address: plugin,
     abi: paymentsPluginAbi,
-    client,
+    client: pbClient,
   });
 
-  const schedule = await plugin.read.getSchedule([data.username, data.id]);
+  const schedule = await pluginContract.read.getSchedule([id]);
 
   const updateFields = {
     nextPayout: schedule.nextPayout.toString(),
@@ -191,27 +93,19 @@ async function updateSchedule(
 
   await tx
     .updateTable("schedule")
-    .set((eb) => ({
-      ...updateFields,
-      payout: eb("payout", "+", data.payout.toString()),
-    }))
-    .where("id", "=", data.id)
+    .set((eb) => ({ ...updateFields, payout: eb("payout", "+", payout) }))
+    .where("id", "=", id)
     .execute();
 }
 
-async function updateStream(
-  client: typeof pbClient,
-  pluginAddr: Address,
-  data: { username: string; payout: number; id: Address },
-  tx: Transaction<DB>
-) {
-  const plugin = getContract({
-    address: pluginAddr,
+async function updateStream(plugin: Address, payout: string, id: Address, tx: Transaction<DB>) {
+  const pluginContract = getContract({
+    address: plugin,
     abi: paymentsPluginAbi,
-    client,
+    client: pbClient,
   });
 
-  const stream = await plugin.read.getStream([data.username, data.id]);
+  const stream = await pluginContract.read.getStream([id]);
   const activeState = stream.state === StreamState.Active;
 
   const updateFields = {
@@ -226,12 +120,7 @@ async function updateStream(
 
   await tx
     .updateTable("stream")
-    .set((eb) => ({
-      ...updateFields,
-      payout: eb("payout", "+", data.payout.toString()),
-    }))
-    .where("id", "=", data.id)
+    .set((eb) => ({ ...updateFields, payout: eb("payout", "+", payout) }))
+    .where("id", "=", id)
     .execute();
 }
-
-export { updateSchedule, updateStream, getScheduleInfo, getStreamInfo };

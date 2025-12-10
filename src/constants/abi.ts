@@ -23,11 +23,18 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "cancelSchedule",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "scheduleId", type: "bytes32", internalType: "bytes32" },
+    name: "_payer",
+    inputs: [{ name: "", type: "address", internalType: "address" }],
+    outputs: [
+      { name: "lastPayerUpdate", type: "uint40", internalType: "uint40" },
+      { name: "totalPaidPerSec", type: "uint216", internalType: "uint216" },
     ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "cancelSchedule",
+    inputs: [{ name: "scheduleId", type: "bytes32", internalType: "bytes32" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -35,10 +42,21 @@ const paymentsPluginAbi = [
     type: "function",
     name: "cancelStream",
     inputs: [
-      { name: "username", type: "string", internalType: "string" },
       { name: "streamId", type: "bytes32", internalType: "bytes32" },
+      { name: "shouldPayout", type: "bool", internalType: "bool" },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "createInvoice",
+    inputs: [
+      { name: "username", type: "string", internalType: "string" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+      { name: "token", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "invoiceId", type: "bytes32", internalType: "bytes32" }],
     stateMutability: "nonpayable",
   },
   {
@@ -62,7 +80,6 @@ const paymentsPluginAbi = [
       { name: "username", type: "string", internalType: "string" },
       { name: "token", type: "address", internalType: "address" },
       { name: "amountPerSec", type: "uint216", internalType: "uint216" },
-      { name: "fundingPeriod", type: "uint8", internalType: "enum IPayments.IntervalType" },
     ],
     outputs: [{ name: "streamId", type: "bytes32", internalType: "bytes32" }],
     stateMutability: "nonpayable",
@@ -76,31 +93,15 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "depositStreamFunds",
-    inputs: [
-      { name: "token", type: "address", internalType: "address" },
-      { name: "amount", type: "uint256", internalType: "uint256" },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "executeSchedule",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "scheduleId", type: "bytes32", internalType: "bytes32" },
-    ],
+    inputs: [{ name: "scheduleId", type: "bytes32", internalType: "bytes32" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
     name: "executeStream",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "streamId", type: "bytes32", internalType: "bytes32" },
-    ],
+    inputs: [{ name: "streamId", type: "bytes32", internalType: "bytes32" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -123,17 +124,49 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "getSchedule",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "scheduleId", type: "bytes32", internalType: "bytes32" },
+    name: "getDecimalsDivisor",
+    inputs: [{ name: "token", type: "address", internalType: "address" }],
+    outputs: [{ name: "decimals_Divisor", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getInvoice",
+    inputs: [{ name: "invoiceId", type: "bytes32", internalType: "bytes32" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        internalType: "struct IPayments.Invoice",
+        components: [
+          { name: "username", type: "string", internalType: "string" },
+          { name: "token", type: "address", internalType: "address" },
+          { name: "amount", type: "uint256", internalType: "uint256" },
+          { name: "paidAt", type: "uint40", internalType: "uint40" },
+          { name: "rejectedAt", type: "uint40", internalType: "uint40" },
+        ],
+      },
     ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getInvoiceIds",
+    inputs: [],
+    outputs: [{ name: "", type: "bytes32[]", internalType: "bytes32[]" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getSchedule",
+    inputs: [{ name: "scheduleId", type: "bytes32", internalType: "bytes32" }],
     outputs: [
       {
         name: "",
         type: "tuple",
         internalType: "struct IPayments.Schedule",
         components: [
+          { name: "username", type: "string", internalType: "string" },
           { name: "token", type: "address", internalType: "address" },
           { name: "amount", type: "uint256", internalType: "uint256" },
           { name: "interval", type: "uint8", internalType: "enum IPayments.IntervalType" },
@@ -149,16 +182,14 @@ const paymentsPluginAbi = [
   {
     type: "function",
     name: "getStream",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "streamId", type: "bytes32", internalType: "bytes32" },
-    ],
+    inputs: [{ name: "streamId", type: "bytes32", internalType: "bytes32" }],
     outputs: [
       {
         name: "",
         type: "tuple",
         internalType: "struct IPayments.Stream",
         components: [
+          { name: "username", type: "string", internalType: "string" },
           { name: "token", type: "address", internalType: "address" },
           { name: "amountPerSec", type: "uint216", internalType: "uint216" },
           { name: "state", type: "uint8", internalType: "enum IPayments.StreamState" },
@@ -166,16 +197,6 @@ const paymentsPluginAbi = [
         ],
       },
     ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getStreamRecipient",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "streamId", type: "bytes32", internalType: "bytes32" },
-    ],
-    outputs: [{ name: "", type: "address", internalType: "address" }],
     stateMutability: "view",
   },
   {
@@ -222,24 +243,6 @@ const paymentsPluginAbi = [
     inputs: [
       { name: "_dao", type: "address", internalType: "contract IDAO" },
       { name: "_registryAddress", type: "address", internalType: "address" },
-      { name: "_llamaPayFactoryAddress", type: "address", internalType: "address" },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "llamaPayFactory",
-    inputs: [],
-    outputs: [{ name: "", type: "address", internalType: "contract ILlamaPayFactory" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "migrateStream",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "streamId", type: "bytes32", internalType: "bytes32" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -247,10 +250,14 @@ const paymentsPluginAbi = [
   {
     type: "function",
     name: "pauseStream",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "streamId", type: "bytes32", internalType: "bytes32" },
-    ],
+    inputs: [{ name: "streamId", type: "bytes32", internalType: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "payInvoice",
+    inputs: [{ name: "invoiceId", type: "bytes32", internalType: "bytes32" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -284,11 +291,18 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "resumeStream",
+    name: "rejectInvoice",
     inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "streamId", type: "bytes32", internalType: "bytes32" },
+      { name: "invoiceId", type: "bytes32", internalType: "bytes32" },
+      { name: "why", type: "string", internalType: "string" },
     ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "resumeStream",
+    inputs: [{ name: "streamId", type: "bytes32", internalType: "bytes32" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -318,16 +332,8 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "tokenToLlamaPay",
-    inputs: [{ name: "", type: "address", internalType: "address" }],
-    outputs: [{ name: "", type: "address", internalType: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "updateFlowRate",
     inputs: [
-      { name: "username", type: "string", internalType: "string" },
       { name: "streamId", type: "bytes32", internalType: "bytes32" },
       { name: "newAmountPerSec", type: "uint216", internalType: "uint216" },
     ],
@@ -338,20 +344,8 @@ const paymentsPluginAbi = [
     type: "function",
     name: "updateScheduleAmount",
     inputs: [
-      { name: "username", type: "string", internalType: "string" },
       { name: "scheduleId", type: "bytes32", internalType: "bytes32" },
       { name: "newAmount", type: "uint256", internalType: "uint256" },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "updateScheduleInterval",
-    inputs: [
-      { name: "username", type: "string", internalType: "string" },
-      { name: "scheduleId", type: "bytes32", internalType: "bytes32" },
-      { name: "newInterval", type: "uint8", internalType: "enum IPayments.IntervalType" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -375,10 +369,17 @@ const paymentsPluginAbi = [
   },
   {
     type: "function",
-    name: "withdrawStreamFunds",
-    inputs: [{ name: "token", type: "address", internalType: "address" }],
-    outputs: [],
-    stateMutability: "nonpayable",
+    name: "withdrawable",
+    inputs: [
+      { name: "_streamId", type: "bytes32", internalType: "bytes32" },
+      { name: "_token", type: "address", internalType: "address" },
+    ],
+    outputs: [
+      { name: "withdrawableAmount", type: "uint256", internalType: "uint256" },
+      { name: "lastUpdate", type: "uint256", internalType: "uint256" },
+      { name: "owed", type: "uint256", internalType: "uint256" },
+    ],
+    stateMutability: "view",
   },
   {
     type: "event",
@@ -414,6 +415,39 @@ const paymentsPluginAbi = [
   },
   {
     type: "event",
+    name: "InvoiceCreated",
+    inputs: [
+      { name: "username", type: "string", indexed: false, internalType: "string" },
+      { name: "invoiceId", type: "bytes32", indexed: true, internalType: "bytes32" },
+      { name: "token", type: "address", indexed: true, internalType: "address" },
+      { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "InvoicePaid",
+    inputs: [
+      { name: "username", type: "string", indexed: false, internalType: "string" },
+      { name: "invoiceId", type: "bytes32", indexed: true, internalType: "bytes32" },
+      { name: "token", type: "address", indexed: true, internalType: "address" },
+      { name: "recipient", type: "address", indexed: true, internalType: "address" },
+      { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "InvoiceRejected",
+    inputs: [
+      { name: "username", type: "string", indexed: false, internalType: "string" },
+      { name: "invoiceId", type: "bytes32", indexed: true, internalType: "bytes32" },
+      { name: "why", type: "string", indexed: false, internalType: "string" },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "ScheduleAmountUpdated",
     inputs: [
       { name: "username", type: "string", indexed: false, internalType: "string" },
@@ -443,7 +477,6 @@ const paymentsPluginAbi = [
       { name: "interval", type: "uint8", indexed: false, internalType: "enum IPayments.IntervalType" },
       { name: "isOneTime", type: "bool", indexed: false, internalType: "bool" },
       { name: "firstPaymentDate", type: "uint40", indexed: false, internalType: "uint40" },
-      { name: "recipient", type: "address", indexed: true, internalType: "address" },
     ],
     anonymous: false,
   },
@@ -462,24 +495,12 @@ const paymentsPluginAbi = [
   },
   {
     type: "event",
-    name: "ScheduleIntervalUpdated",
-    inputs: [
-      { name: "username", type: "string", indexed: false, internalType: "string" },
-      { name: "scheduleId", type: "bytes32", indexed: true, internalType: "bytes32" },
-      { name: "oldInterval", type: "uint8", indexed: false, internalType: "enum IPayments.IntervalType" },
-      { name: "newInterval", type: "uint8", indexed: false, internalType: "enum IPayments.IntervalType" },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
     name: "StreamCreated",
     inputs: [
       { name: "username", type: "string", indexed: false, internalType: "string" },
       { name: "streamId", type: "bytes32", indexed: true, internalType: "bytes32" },
       { name: "token", type: "address", indexed: true, internalType: "address" },
       { name: "amountPerSec", type: "uint216", indexed: false, internalType: "uint216" },
-      { name: "recipient", type: "address", indexed: true, internalType: "address" },
     ],
     anonymous: false,
   },
@@ -491,17 +512,7 @@ const paymentsPluginAbi = [
       { name: "streamId", type: "bytes32", indexed: true, internalType: "bytes32" },
       { name: "token", type: "address", indexed: true, internalType: "address" },
       { name: "recipient", type: "address", indexed: true, internalType: "address" },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "StreamMigrated",
-    inputs: [
-      { name: "username", type: "string", indexed: false, internalType: "string" },
-      { name: "streamId", type: "bytes32", indexed: true, internalType: "bytes32" },
-      { name: "oldRecipient", type: "address", indexed: false, internalType: "address" },
-      { name: "newRecipient", type: "address", indexed: true, internalType: "address" },
+      { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
     ],
     anonymous: false,
   },
@@ -571,14 +582,15 @@ const paymentsPluginAbi = [
     ],
   },
   { type: "error", name: "InvalidToken", inputs: [] },
-  { type: "error", name: "MigrationNotRequired", inputs: [] },
+  { type: "error", name: "InvoiceAlreadyPaid", inputs: [] },
+  { type: "error", name: "InvoiceIdNotFound", inputs: [] },
+  { type: "error", name: "InvoiceIsRejected", inputs: [] },
   { type: "error", name: "PaymentNotDue", inputs: [] },
   { type: "error", name: "ScheduleIdNotFound", inputs: [] },
   { type: "error", name: "ScheduleNotActive", inputs: [] },
   { type: "error", name: "StreamIdNotFound", inputs: [] },
   { type: "error", name: "StreamNotActive", inputs: [] },
   { type: "error", name: "StreamStateMismatch", inputs: [] },
-  { type: "error", name: "UnauthorizedMigration", inputs: [] },
   { type: "error", name: "UsernameNotFound", inputs: [] },
 ] as const;
 
@@ -586,11 +598,26 @@ const paynestDaoFactoryAbi = [
   {
     type: "constructor",
     inputs: [
-      { name: "_addressRegistry", type: "address", internalType: "contract AddressRegistry" },
-      { name: "_daoFactory", type: "address", internalType: "contract DAOFactory" },
-      { name: "_adminPluginRepo", type: "address", internalType: "contract PluginRepo" },
-      { name: "_paymentsPluginRepo", type: "address", internalType: "contract PluginRepo" },
-      { name: "_llamaPayFactory", type: "address", internalType: "address" },
+      {
+        name: "_addressRegistry",
+        type: "address",
+        internalType: "contract AddressRegistry",
+      },
+      {
+        name: "_daoFactory",
+        type: "address",
+        internalType: "contract DAOFactory",
+      },
+      {
+        name: "_adminPluginRepo",
+        type: "address",
+        internalType: "contract PluginRepo",
+      },
+      {
+        name: "_paymentsPluginRepo",
+        type: "address",
+        internalType: "contract PluginRepo",
+      },
     ],
     stateMutability: "nonpayable",
   },
@@ -690,13 +717,6 @@ const paynestDaoFactoryAbi = [
   },
   {
     type: "function",
-    name: "llamaPayFactory",
-    inputs: [],
-    outputs: [{ name: "", type: "address", internalType: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "paymentsPluginRepo",
     inputs: [],
     outputs: [{ name: "", type: "address", internalType: "contract PluginRepo" }],
@@ -707,10 +727,30 @@ const paynestDaoFactoryAbi = [
     name: "PayNestDAOCreated",
     inputs: [
       { name: "dao", type: "address", indexed: true, internalType: "address" },
-      { name: "admin", type: "address", indexed: true, internalType: "address" },
-      { name: "adminPlugin", type: "address", indexed: false, internalType: "address" },
-      { name: "paymentsPlugin", type: "address", indexed: false, internalType: "address" },
-      { name: "daoName", type: "string", indexed: false, internalType: "string" },
+      {
+        name: "admin",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "adminPlugin",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "paymentsPlugin",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "daoName",
+        type: "string",
+        indexed: false,
+        internalType: "string",
+      },
     ],
     anonymous: false,
   },
@@ -720,19 +760,4 @@ const paynestDaoFactoryAbi = [
   { type: "error", name: "PluginInstallationFailed", inputs: [] },
 ] as const;
 
-const llamaPayAbi = [
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "from", type: "address" },
-      { indexed: true, internalType: "address", name: "to", type: "address" },
-      { indexed: false, internalType: "uint216", name: "amountPerSec", type: "uint216" },
-      { indexed: false, internalType: "bytes32", name: "streamId", type: "bytes32" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "Withdraw",
-    type: "event",
-  },
-] as const;
-
-export { paymentsPluginAbi, paynestDaoFactoryAbi, llamaPayAbi };
+export { paymentsPluginAbi, paynestDaoFactoryAbi };

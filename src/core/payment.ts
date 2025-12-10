@@ -79,13 +79,12 @@ async function executeSchedulePayment(id: `0x${string}`) {
   if (balance < schedule.amount) return await handleLowBalance(org, username);
 
   try {
-    await plugin.simulate.executeSchedule([username, id]);
+    await plugin.simulate.executeSchedule([id]);
+    await plugin.write.executeSchedule([id], CONSTS);
   } catch (error) {
-    console.log(error, "simulate error");
+    // console.log(error, "simulate error");
     return await handleSimulationError(error, id, username, org.name); // skip this user as simulation fails
   }
-
-  await plugin.write.executeSchedule([username, id], CONSTS);
 }
 
 async function handleLowBalance(org: Pick<Organization, "owner" | "name" | "id">, username: string) {
@@ -134,7 +133,7 @@ async function handleSimulationError(error: unknown, id: string, username: strin
   }
 }
 
-export default async function scheduleUpcomingPayouts() {
+export default async function paySchedulePayouts() {
   const nowMs = Date.now();
   const now = Math.floor(nowMs / 1000);
   const schedules = await withRetry(() => loadUpcomingSchedules(now));

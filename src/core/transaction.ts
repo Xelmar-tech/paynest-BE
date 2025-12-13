@@ -94,7 +94,7 @@ export default async function addTransaction(
       if (eventName === "InvoicePaid") {
         await tx
           .updateTable("invoice")
-          .set({ paidAt: new Date() })
+          .set({ paidAt: date })
           .where("id", "=", id)
           .execute();
       } else await updatePayment(logs.address, payout, id, tx, date);

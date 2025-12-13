@@ -80,7 +80,9 @@ export default async function addTransaction(
           ? (args as StreamExecutedArgs).streamId
           : null,
       invoice_id:
-        eventName === "InvoicePaid" ? (args as InvoicePaid).invoiceId : null,
+        eventName === "InvoicePaid"
+          ? (args as InvoicePaidArgs).invoiceId
+          : null,
       created_at: date,
       type,
     };

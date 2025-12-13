@@ -15,7 +15,7 @@ interface StreamExecutedArgs {
   amount: bigint;
 }
 
-interface InvoicePaid {
+interface InvoicePaidArgs {
   username: string;
   invoiceId: Address;
   token: Address;
@@ -27,7 +27,7 @@ interface TransactionLog {
   eventName: "ScheduleExecuted" | "StreamExecuted" | "InvoicePaid";
   transactionHash: Address;
   address: Address;
-  args: ScheduleExecutedArgs | StreamExecutedArgs | InvoicePaid;
+  args: ScheduleExecutedArgs | StreamExecutedArgs | InvoicePaidArgs;
 }
 
 interface ScheduleCreatedArgs {
@@ -54,11 +54,25 @@ interface StreamCreatedArgs {
   amountPerSec: bigint;
 }
 
-type PluginCreateActionsLog = ScheduleCreatedArgs | InvoiceCreatedArgs | StreamCreatedArgs;
+type InvoiceRejectedArgs = {
+  username: string;
+  invoiceId: Address;
+  why: string;
+};
 
-interface PluginEventLog {
-  address: Address;
-  args: PluginCreateActionsLog;
-  transactionHash: Address;
-  eventName: "InvoiceCreated" | "ScheduleCreated" | "StreamCreated";
-}
+type EventArgMap = {
+  ScheduleCreated: ScheduleCreatedArgs;
+  InvoiceCreated: InvoiceCreatedArgs;
+  StreamCreated: StreamCreatedArgs;
+  InvoiceRejected: InvoiceRejectedArgs;
+  InvoicePaid: InvoicePaidArgs;
+};
+
+type PluginEventLog = {
+  [K in keyof EventArgMap]: {
+    eventName: K;
+    args: EventArgMap[K];
+    address: Address;
+    transactionHash: Address;
+  };
+}[keyof EventArgMap];

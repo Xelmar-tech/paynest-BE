@@ -16,8 +16,13 @@ const limits: Record<EmailKeys, { base: number; max: number }> = {
   "complete-profile": { base: WEEK, max: 2 },
 };
 
-const hashEmail = (email: string) => createHash("sha1").update(email).digest("hex").slice(0, 12);
-export async function spamCheck(spamKey: EmailKeys, orgId: string, email: string) {
+const hashEmail = (email: string) =>
+  createHash("sha1").update(email).digest("hex").slice(0, 12);
+export async function spamCheck(
+  spamKey: EmailKeys,
+  orgId: string,
+  email: string
+) {
   const key = `spam:${orgId}:${hashEmail(email)}`;
   const { max, base } = limits[spamKey];
 
@@ -80,7 +85,8 @@ async function informPaymentDelay(user: EmailUserParams) {
 }
 
 async function completeProfileMail(user: CompleteProfileParams) {
-  if (!(await spamCheck("complete-profile", "paynest-general", user.email))) return;
+  if (!(await spamCheck("complete-profile", "paynest-general", user.email)))
+    return;
   const url = endpoint + "/complete-profile";
   await fetch(url, {
     method: "POST",
@@ -104,4 +110,62 @@ async function incomingPaymentSchedule(args: IncomingScheduledPaymentParams) {
   });
 }
 
-export { completeProfileMail, incomingPaymentSchedule, warnLowBalance, warnFailedPayment, informPaymentDelay };
+async function streamPaymentAlert(args: StreamPaymentParams) {
+  const url = endpoint + "/stream-payment-alert";
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+    },
+    body: JSON.stringify(args),
+  });
+}
+
+async function newInvoiceAlert(args: NewInvoiceAlertParams) {
+  const url = endpoint + "/new-invoice-alert";
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+    },
+    body: JSON.stringify(args),
+  });
+}
+
+async function declinedInvoiceAlert(args: RejectedInvoiceParams) {
+  const url = endpoint + "/declined-invoice";
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+    },
+    body: JSON.stringify(args),
+  });
+}
+
+async function approvedInvoiceAlert(args: NewInvoiceAlertParams) {
+  const url = endpoint + "/approved-invoice";
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+    },
+    body: JSON.stringify(args),
+  });
+}
+
+export {
+  completeProfileMail,
+  incomingPaymentSchedule,
+  warnLowBalance,
+  warnFailedPayment,
+  informPaymentDelay,
+  streamPaymentAlert,
+  newInvoiceAlert,
+  declinedInvoiceAlert,
+  approvedInvoiceAlert,
+};

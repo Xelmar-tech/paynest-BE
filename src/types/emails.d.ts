@@ -8,7 +8,35 @@ type IncomingScheduledPaymentParams = {
   orgName: string;
 };
 
-type EmailKeys = "low-balance" | "failed-payment" | "payment-delay" | "complete-profile";
+type StreamPaymentParams = {
+  name?: string;
+  email: string;
+  username: string;
+  amount: number | undefined;
+  token: string;
+  startDate: string;
+  period: string | undefined;
+  flowRate: string;
+  orgName: string;
+};
+
+type NewInvoiceAlertParams = Pick<
+  StreamPaymentParams,
+  "amount" | "token" | "orgName" | "username" | "name"
+>;
+
+type RejectedInvoiceParams = Pick<
+  StreamPaymentParams,
+  "orgName" | "username" | "name"
+> & {
+  reason: string;
+};
+
+type EmailKeys =
+  | "low-balance"
+  | "failed-payment"
+  | "payment-delay"
+  | "complete-profile";
 
 type EmailOrgParams = {
   orgId: string;
@@ -37,4 +65,5 @@ type SharedPluginActionValues = {
   org: {
     name: string;
   };
+  date: Date;
 };

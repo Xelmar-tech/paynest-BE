@@ -1,34 +1,57 @@
 /// <reference path="../types/logs.d.ts" />
 
-import { ContractFunctionRevertedError, formatUnits, getContract, type Address } from "viem";
+import {
+  ContractFunctionRevertedError,
+  formatUnits,
+  getContract,
+  type Address,
+} from "viem";
 import { pbClient } from "../utils/config";
 import { getTokenByAddress } from "../utils/token";
 import { StreamState } from "../utils/onchain-utils";
 import { paymentsPluginAbi } from "../constants/abi";
 import type { DB, Token } from "../db/types";
-import { NetworkType, StreamState as stream_state, TransactionType } from "../db/types";
+import {
+  NetworkType,
+  StreamState as stream_state,
+  TransactionType,
+} from "../db/types";
 import { getTxDate } from "../helpers/onchain-helpers";
 import type { Transaction } from "kysely";
 import db from "../db";
 import { withRetry } from "../utils";
 
-export default async function addTransaction({ args, eventName, ...logs }: TransactionLog, now = false) {
+export default async function addTransaction(
+  { args, eventName, ...logs }: TransactionLog,
+  now = false
+) {
   const { username, token, recipient, amount } = args;
   try {
     const existingTx = await withRetry(() =>
-      db.selectFrom("transaction").select("tx_id").where("tx_id", "=", logs.transactionHash).executeTakeFirst()
+      db
+        .selectFrom("transaction")
+        .select("tx_id")
+        .where("tx_id", "=", logs.transactionHash)
+        .executeTakeFirst()
     );
     if (existingTx) return true;
 
     const asset = getTokenByAddress(NetworkType.BASE, token);
-    if (!asset) throw new Error(`${token} has no asset for the BASE network, transaction not supported for storage`);
+    if (!asset)
+      throw new Error(
+        `${token} has no asset for the BASE network, transaction not supported for storage`
+      );
 
     const table = eventName === "ScheduleExecuted" ? "schedule" : "stream";
     const id =
       eventName === "ScheduleExecuted"
         ? (args as ScheduleExecutedArgs).scheduleId
         : (args as StreamExecutedArgs).streamId;
-    const { org_id } = await db.selectFrom(table).select("org_id").where("id", "=", id).executeTakeFirstOrThrow();
+    const { org_id } = await db
+      .selectFrom(table)
+      .select("org_id")
+      .where("id", "=", id)
+      .executeTakeFirstOrThrow();
 
     const date = await getTxDate(logs.transactionHash, now);
     const payout = formatUnits(amount, 6);
@@ -48,21 +71,33 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
       recipient,
       org_id,
       username,
-      schedule_id: eventName === "ScheduleExecuted" ? (args as ScheduleExecutedArgs).scheduleId : null,
-      stream_id: eventName === "StreamExecuted" ? (args as StreamExecutedArgs).streamId : null,
-      invoice_id: eventName === "InvoicePaid" ? (args as InvoicePaid).invoiceId : null,
+      schedule_id:
+        eventName === "ScheduleExecuted"
+          ? (args as ScheduleExecutedArgs).scheduleId
+          : null,
+      stream_id:
+        eventName === "StreamExecuted"
+          ? (args as StreamExecutedArgs).streamId
+          : null,
+      invoice_id:
+        eventName === "InvoicePaid" ? (args as InvoicePaid).invoiceId : null,
       created_at: date,
       type,
     };
 
-    const updatePayment = eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
+    const updatePayment =
+      eventName === "ScheduleExecuted" ? updateSchedule : updateStream;
 
     await db.transaction().execute(async (tx) => {
       await tx.insertInto("transaction").values(txn).execute();
 
       if (eventName === "InvoicePaid") {
-        await tx.updateTable("invoice").set({ paidAt: new Date() }).where("id", "=", id).execute();
-      } else await updatePayment(logs.address, payout, id, tx);
+        await tx
+          .updateTable("invoice")
+          .set({ paidAt: new Date() })
+          .where("id", "=", id)
+          .execute();
+      } else await updatePayment(logs.address, payout, id, tx, date);
 
       await tx
         .updateTable("user")
@@ -79,7 +114,8 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
       const functionNameMatch = error.shortMessage.match(/"([^"]+)"/);
       const functionName = functionNameMatch ? functionNameMatch[1] : null;
 
-      if (functionName && ["getSchedule", "getStream"].includes(functionName)) return true;
+      if (functionName && ["getSchedule", "getStream"].includes(functionName))
+        return true;
     }
 
     console.error("Error in addTransaction", error);
@@ -87,7 +123,12 @@ export default async function addTransaction({ args, eventName, ...logs }: Trans
   }
 }
 
-async function updateSchedule(plugin: Address, payout: string, id: Address, tx: Transaction<DB>) {
+async function updateSchedule(
+  plugin: Address,
+  payout: string,
+  id: Address,
+  tx: Transaction<DB>
+) {
   const pluginContract = getContract({
     address: plugin,
     abi: paymentsPluginAbi,
@@ -108,7 +149,13 @@ async function updateSchedule(plugin: Address, payout: string, id: Address, tx: 
     .execute();
 }
 
-async function updateStream(plugin: Address, payout: string, id: Address, tx: Transaction<DB>) {
+async function updateStream(
+  plugin: Address,
+  payout: string,
+  id: Address,
+  tx: Transaction<DB>,
+  date: Date
+) {
   const pluginContract = getContract({
     address: plugin,
     abi: paymentsPluginAbi,
@@ -119,7 +166,7 @@ async function updateStream(plugin: Address, payout: string, id: Address, tx: Tr
   const activeState = stream.state === StreamState.Active;
 
   const updateFields = {
-    lastPayout: Math.floor(new Date().getTime() / 1000).toString(),
+    lastPayout: Math.floor(date.getTime() / 1000).toString(),
     active: activeState,
     state: activeState
       ? stream_state.ACTIVE

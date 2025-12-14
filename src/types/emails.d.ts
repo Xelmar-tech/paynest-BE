@@ -23,11 +23,19 @@ type StreamPaymentParams = {
 type NewInvoiceAlertParams = Pick<
   StreamPaymentParams,
   "amount" | "token" | "orgName" | "username" | "name"
+> & {
+  org_email?: string;
+  user_email: string;
+};
+
+type ApprovedInvoiceParams = Pick<
+  StreamPaymentParams,
+  "amount" | "token" | "orgName" | "username" | "name" | "email"
 >;
 
 type RejectedInvoiceParams = Pick<
   StreamPaymentParams,
-  "orgName" | "username" | "name"
+  "orgName" | "username" | "name" | "email"
 > & {
   reason: string;
 };
@@ -64,6 +72,7 @@ type SharedPluginActionValues = {
   };
   org: {
     name: string;
+    owner: string;
   };
   date: Date;
 };

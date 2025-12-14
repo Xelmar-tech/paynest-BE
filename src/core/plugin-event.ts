@@ -31,7 +31,7 @@ async function pluginEvent(
     const [org, user, decimals, date] = await Promise.all([
       db
         .selectFrom("organization")
-        .select("name")
+        .select(["name", "owner"])
         .where("plugin", "=", checksumAddress(rest.address))
         .executeTakeFirst(),
       db
@@ -147,14 +147,21 @@ async function invoiceCreatedEvent(
   const { decimals, user, org, token, date } = val;
   const { username } = args;
 
+  const owner = await db
+    .selectFrom("user")
+    .select("email")
+    .where("username", "=", org.owner)
+    .executeTakeFirst();
+
   const amountStr = formatUnits(args.amount, decimals);
   const amount = Number(amountStr);
 
   const params = {
     name: user.name || undefined,
     username,
-    email: user.email,
+    user_email: user.email,
     orgName: org.name,
+    org_email: owner?.email ?? undefined,
     amount,
     token,
     dateTime: formatEmailDate(date),
@@ -203,13 +210,14 @@ async function invoiceRejectedEvent(
       .executeTakeFirst(),
   ]);
 
-  if (!org || !user) return;
+  if (!org || !user?.email) return;
 
   const params = {
     email: user.email,
     orgName: org.name,
     username: args.username,
     reason: args.why,
+    name: user.name ?? undefined,
   };
 
   await declinedInvoiceAlert(params);

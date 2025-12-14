@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import redis from "./lib/redis";
 import { getEnvVariable } from "./utils/config";
 
-const endpoint = "https://app.paynest.xyz/api/email";
+const endpoint = "https://3c0fcf02f17b.ngrok-free.app/api/email"; //"https://app.paynest.xyz/api/email";
 const key = getEnvVariable("EMAIL_API_KEY");
 
 const HOUR = 60 * 60;
@@ -146,7 +146,7 @@ async function declinedInvoiceAlert(args: RejectedInvoiceParams) {
   });
 }
 
-async function approvedInvoiceAlert(args: NewInvoiceAlertParams) {
+async function approvedInvoiceAlert(args: ApprovedInvoiceParams) {
   const url = endpoint + "/approved-invoice";
   await fetch(url, {
     method: "POST",

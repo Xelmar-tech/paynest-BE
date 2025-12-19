@@ -18,11 +18,9 @@ export default function watch_events() {
     onLogs: async (logs) => {
       for (const log of logs) {
         const { args, address, transactionHash, eventName } = log;
+        console.log(args, eventName);
         const params = { args, address, transactionHash, eventName };
-        await redis.set(
-          `${EVENT_NAME.EVENT}:${transactionHash}`,
-          JSON.stringify(params, replacer)
-        );
+        await redis.set(`${EVENT_NAME.EVENT}:${transactionHash}`, JSON.stringify(params, replacer));
         event.emit(EVENT_NAME.EVENT, params);
       }
     },

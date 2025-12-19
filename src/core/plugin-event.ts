@@ -16,16 +16,13 @@ import { NetworkType } from "../db/types";
 import { sql } from "kysely";
 import { getTxDate } from "../helpers/onchain-helpers";
 
-async function pluginEvent(
-  { args, eventName, ...rest }: PluginEventLog,
-  view = false
-) {
+async function pluginEvent({ args, eventName, ...rest }: PluginEventLog) {
   try {
     await withRetry(() => sql`SELECT 1`.execute(db));
 
     if (eventName === "InvoiceRejected") {
       await invoiceRejectedEvent(args, rest.address);
-      return;
+      return true;
     }
 
     const [org, user, decimals, date] = await Promise.all([
@@ -34,11 +31,7 @@ async function pluginEvent(
         .select(["name", "owner"])
         .where("plugin", "=", checksumAddress(rest.address))
         .executeTakeFirst(),
-      db
-        .selectFrom("user")
-        .select(["name", "email"])
-        .where("username", "=", args.username)
-        .executeTakeFirst(),
+      db.selectFrom("user").select(["name", "email"]).where("username", "=", args.username).executeTakeFirst(),
       getDecimals(args.token),
       getTxDate(rest.transactionHash),
     ]);
@@ -83,10 +76,7 @@ async function pluginEvent(
   }
 }
 
-async function scheduleCreatedEvent(
-  args: ScheduleCreatedArgs,
-  vals: SharedPluginActionValues
-) {
+async function scheduleCreatedEvent(args: ScheduleCreatedArgs, vals: SharedPluginActionValues) {
   const { decimals, user, org, token } = vals;
   const { username, firstPaymentDate, amount: amountBigInt } = args;
 
@@ -109,10 +99,7 @@ async function scheduleCreatedEvent(
   await incomingPaymentSchedule(params);
 }
 
-async function streamCreatedEvent(
-  args: StreamCreatedArgs,
-  vals: SharedPluginActionValues
-) {
+async function streamCreatedEvent(args: StreamCreatedArgs, vals: SharedPluginActionValues) {
   const { decimals, user, org, token, date } = vals;
   const { username, streamId, amountPerSec } = args;
 
@@ -140,18 +127,11 @@ async function streamCreatedEvent(
   await streamPaymentAlert(params);
 }
 
-async function invoiceCreatedEvent(
-  args: InvoiceCreatedArgs,
-  val: SharedPluginActionValues
-) {
+async function invoiceCreatedEvent(args: InvoiceCreatedArgs, val: SharedPluginActionValues) {
   const { decimals, user, org, token, date } = val;
   const { username } = args;
 
-  const owner = await db
-    .selectFrom("user")
-    .select("email")
-    .where("username", "=", org.owner)
-    .executeTakeFirst();
+  const owner = await db.selectFrom("user").select("email").where("username", "=", org.owner).executeTakeFirst();
 
   const amountStr = formatUnits(args.amount, decimals);
   const amount = Number(amountStr);
@@ -170,10 +150,7 @@ async function invoiceCreatedEvent(
   await newInvoiceAlert(params);
 }
 
-async function invoicePaidEvent(
-  args: InvoicePaidArgs,
-  val: SharedPluginActionValues
-) {
+async function invoicePaidEvent(args: InvoicePaidArgs, val: SharedPluginActionValues) {
   const { decimals, user, org, token, date } = val;
   const { username } = args;
 
@@ -193,21 +170,10 @@ async function invoicePaidEvent(
   await approvedInvoiceAlert(params);
 }
 
-async function invoiceRejectedEvent(
-  args: InvoiceRejectedArgs,
-  plugin: Address
-) {
+async function invoiceRejectedEvent(args: InvoiceRejectedArgs, plugin: Address) {
   const [org, user] = await Promise.all([
-    db
-      .selectFrom("organization")
-      .select("name")
-      .where("plugin", "=", checksumAddress(plugin))
-      .executeTakeFirst(),
-    db
-      .selectFrom("user")
-      .select(["name", "email"])
-      .where("username", "=", args.username)
-      .executeTakeFirst(),
+    db.selectFrom("organization").select("name").where("plugin", "=", checksumAddress(plugin)).executeTakeFirst(),
+    db.selectFrom("user").select(["name", "email"]).where("username", "=", args.username).executeTakeFirst(),
   ]);
 
   if (!org || !user?.email) return;

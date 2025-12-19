@@ -13,6 +13,6 @@ export default async function fetchCreatedSchedules() {
 
   for (const log of logs) {
     const { args, address, transactionHash, eventName } = log;
-    await pluginEvent({ args, address, transactionHash, eventName }, true);
+    await pluginEvent({ args, address, transactionHash, eventName });
   }
 }

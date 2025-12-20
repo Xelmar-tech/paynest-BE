@@ -18,7 +18,8 @@ import trackAdminEvents from "./crons/admin-actions-tracking";
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
     const success = await addTransaction(data, true);
-    if (success) await redis.del(`${EVENT_NAME.TRANSACTION}:${data.transactionHash}`);
+    if (success)
+      await redis.del(`${EVENT_NAME.TRANSACTION}:${data.transactionHash}`);
   });
 
   event.addListener(EVENT_NAME.EVENT, async (data: PluginEventLog) => {

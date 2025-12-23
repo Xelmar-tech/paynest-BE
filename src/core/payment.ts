@@ -59,7 +59,8 @@ async function getScheduleAndOrgByScheduleId(id: `0x${string}`) {
 }
 
 async function executeSchedulePayment(id: `0x${string}`) {
-  const { username, asset, network, nextPayout, org } = await getScheduleAndOrgByScheduleId(id);
+  const { username, asset, network, nextPayout, org } =
+    await getScheduleAndOrgByScheduleId(id);
   const CONSTS = await getConsts(network);
 
   const token = getAddressByToken(network, asset);
@@ -87,10 +88,21 @@ async function executeSchedulePayment(id: `0x${string}`) {
   }
 }
 
-async function handleLowBalance(org: Pick<Organization, "owner" | "name" | "id">, username: string) {
+async function handleLowBalance(
+  org: Pick<Organization, "owner" | "name" | "id">,
+  username: string
+) {
   const [owner, user] = await Promise.all([
-    db.selectFrom("user").select("email").where("username", "=", org.owner).executeTakeFirstOrThrow(),
-    db.selectFrom("user").select(["email", "name"]).where("username", "=", username).executeTakeFirstOrThrow(),
+    db
+      .selectFrom("user")
+      .select("email")
+      .where("username", "=", org.owner)
+      .executeTakeFirstOrThrow(),
+    db
+      .selectFrom("user")
+      .select(["email", "name"])
+      .where("username", "=", username)
+      .executeTakeFirstOrThrow(),
   ]);
 
   if (!owner?.email || !user?.email) {
@@ -111,7 +123,11 @@ async function handleLowBalance(org: Pick<Organization, "owner" | "name" | "id">
   ]);
 }
 
-async function updateScheduleState(nextPayout: number, active: boolean, id: `0x${string}`) {
+async function updateScheduleState(
+  nextPayout: number,
+  active: boolean,
+  id: `0x${string}`
+) {
   await db
     .updateTable("schedule")
     .set({ nextPayout: nextPayout.toString(), active: active })
@@ -119,17 +135,30 @@ async function updateScheduleState(nextPayout: number, active: boolean, id: `0x$
     .execute();
 }
 
-async function handleSimulationError(error: unknown, id: string, username: string, orgName: string) {
+async function handleSimulationError(
+  error: unknown,
+  id: string,
+  username: string,
+  orgName: string
+) {
   if (error instanceof ContractFunctionExecutionError) {
     const cause: string = (error.cause as any).data.errorName;
     if (cause === "ScheduleNotActive") {
-      await db.updateTable("schedule").set({ active: false }).where("id", "=", id).execute();
+      await db
+        .updateTable("schedule")
+        .set({ active: false })
+        .where("id", "=", id)
+        .execute();
     } else {
-      console.error(`${error.cause.shortMessage}\n${error.cause.metaMessages?.[0]}`);
+      console.error(
+        `${error.cause.shortMessage}\n${error.cause.metaMessages?.[0]}`
+      );
     }
   } else {
     const errorMessage = (error as any).metaMessages.join("\n");
-    console.error(`Simulation failed for ${username} on Org ${orgName}:\n${errorMessage}`);
+    console.error(
+      `Simulation failed for ${username} on Org ${orgName}:\n${errorMessage}`
+    );
   }
 }
 
@@ -141,8 +170,12 @@ export default async function paySchedulePayouts() {
   for (const s of schedules) {
     const runAt = Number(s.nextPayout) * 1000;
     const delay = runAt - nowMs;
-
-    if (delay <= 0) await executeSchedulePayment(s.id as `0x${string}`);
-    else setTimeout(() => executeSchedulePayment(s.id as `0x${string}`), delay);
+    try {
+      if (delay <= 0) await executeSchedulePayment(s.id as `0x${string}`);
+      else
+        setTimeout(() => executeSchedulePayment(s.id as `0x${string}`), delay);
+    } catch (error) {
+      console.error(`Error in executing schedule: ${JSON.stringify(s)}`, error);
+    }
   }
 }

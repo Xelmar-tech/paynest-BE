@@ -10,12 +10,21 @@ import { paymentsPluginAbi } from "../constants/abi";
 
 export default async function fetchPastMissingTxns() {
   const { tx_id } = await withRetry(() =>
-    db.selectFrom("transaction").select("tx_id").orderBy("created_at", "desc").limit(1).executeTakeFirstOrThrow()
+    db
+      .selectFrom("transaction")
+      .select("tx_id")
+      .orderBy("created_at", "desc")
+      .limit(1)
+      .executeTakeFirstOrThrow()
   );
   const blockNumber = await getTxBlock(tx_id as Address);
 
   const logs = await pbClient.getLogs({
-    events: [paymentsPluginAbi[49], paymentsPluginAbi[51], paymentsPluginAbi[44]],
+    events: [
+      paymentsPluginAbi[49],
+      paymentsPluginAbi[51],
+      paymentsPluginAbi[44],
+    ],
     strict: true,
     fromBlock: blockNumber + BigInt(1),
   });
@@ -23,9 +32,26 @@ export default async function fetchPastMissingTxns() {
   console.log(logs.length, "Missing transactions found");
 
   for (const log of logs) {
-    const { args, address, transactionHash, eventName } = log;
-    await addTransaction({ args, address, transactionHash, eventName });
+    const { args, address, transactionHash, eventName, logIndex } = log;
+    await addTransaction({
+      args,
+      address,
+      transactionHash,
+      eventName,
+      logIndex,
+    });
   }
 }
 
-fetchPastMissingTxns();
+if (require.main === module) {
+  console.log("Script running directly...");
+  fetchPastMissingTxns()
+    .then(() => {
+      console.log("✅ Script finished successfully.");
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("❌ Script failed:", error);
+      process.exit(1);
+    });
+}

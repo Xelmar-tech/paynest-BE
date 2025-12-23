@@ -28,6 +28,7 @@ interface TransactionLog {
   transactionHash: Address;
   address: Address;
   args: ScheduleExecutedArgs | StreamExecutedArgs | InvoicePaidArgs;
+  logIndex: number;
 }
 
 interface ScheduleCreatedArgs {
@@ -74,5 +75,6 @@ type PluginEventLog = {
     args: EventArgMap[K];
     address: Address;
     transactionHash: Address;
+    logIndex: number;
   };
 }[keyof EventArgMap];

@@ -5,16 +5,20 @@ import redis from "../lib/redis";
 import { pbClient } from "../utils/config";
 import { NetworkType, Token, TransactionType } from "../db/types";
 import { getTxDate } from "../helpers/onchain-helpers";
+import { REDIS_KEY } from "../lib/event";
 
 export default async function trackDeposits() {
-  const org_wallets = await db.selectFrom("organization").select("wallet").execute();
+  const org_wallets = await db
+    .selectFrom("organization")
+    .select("wallet")
+    .execute();
 
   const wallets = org_wallets.map((org) => {
     const addr = org.wallet.trim().toLowerCase();
     const address = getAddress(addr);
     return address;
   });
-  const lastBlock = await redis.get<number>("deposit-block");
+  const lastBlock = await redis.get<number>(REDIS_KEY.DEPOSIT_EVENT);
   const from = lastBlock ? BigInt(lastBlock) : BigInt(deploymentBlock);
 
   const logs = await pbClient.getLogs({
@@ -35,7 +39,11 @@ export default async function trackDeposits() {
     const amount = formatUnits(value, 6);
 
     const date = await getTxDate(hash);
-    const org = await db.selectFrom("organization").select("id").where("wallet", "ilike", to).executeTakeFirst();
+    const org = await db
+      .selectFrom("organization")
+      .select("id")
+      .where("wallet", "ilike", to)
+      .executeTakeFirst();
     if (!org) continue;
 
     const tx = {
@@ -57,5 +65,5 @@ export default async function trackDeposits() {
   }
 
   const nowBlock = await pbClient.getBlockNumber();
-  await redis.set("deposit-block", Number(nowBlock));
+  await redis.set(REDIS_KEY.DEPOSIT_EVENT, Number(nowBlock));
 }

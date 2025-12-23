@@ -4,6 +4,8 @@ import { warnLowBalance } from "../email";
 import db from "../db";
 import { withRetry } from "../utils";
 
+const ONE_HOUR = 60 * 60;
+const SIX_HOURS = ONE_HOUR * 6;
 async function getSchedules() {
   const now = Math.floor(Date.now() / 1000);
   const rows = await db
@@ -22,7 +24,7 @@ async function getSchedules() {
     ])
     .where("schedule.active", "=", true)
     .where("nextPayout", ">=", now.toString())
-    .where("nextPayout", "<=", (now + 3600).toString())
+    .where("nextPayout", "<=", (now + SIX_HOURS).toString())
     .execute();
 
   const schedules = rows.map((r) => ({
@@ -58,7 +60,9 @@ export default async function upcomingPayments() {
     const balance = await getBalance(token, org.wallet as `0x${string}`);
     if (balance < Number(amount)) {
       if (owner.email === null) {
-        console.error(`Cannot notify ${org.name} owner with username ${org.owner}, email is null`);
+        console.error(
+          `Cannot notify ${org.name} owner with username ${org.owner}, email is null`
+        );
       } else {
         const params = { orgName: org.name, orgId: org.id, email: owner.email };
         await warnLowBalance(params);

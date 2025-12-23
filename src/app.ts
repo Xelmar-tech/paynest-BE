@@ -18,8 +18,7 @@ import trackAdminEvents from "./crons/admin-actions-tracking";
 async function main() {
   event.addListener(EVENT_NAME.TRANSACTION, async (data: TransactionLog) => {
     const success = await addTransaction(data, true);
-    if (success)
-      await redis.del(`${EVENT_NAME.TRANSACTION}:${data.transactionHash}`);
+    if (success) await redis.del(`${EVENT_NAME.TRANSACTION}:${data.transactionHash}`);
   });
 
   event.addListener(EVENT_NAME.EVENT, async (data: PluginEventLog) => {
@@ -30,9 +29,16 @@ async function main() {
   cron.schedule("*/10 * * * *", async () => {
     try {
       await payments();
-      await upcomingPayments();
     } catch (error) {
       console.error("Error in fetching payments", error);
+    }
+  });
+
+  cron.schedule("0 */6 * * *", async () => {
+    try {
+      await upcomingPayments();
+    } catch (error) {
+      console.error("Error in notifying of upcoming payments", error);
     }
   });
 
